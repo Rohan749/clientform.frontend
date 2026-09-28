@@ -22,3 +22,4 @@ export function BrowserFrame({ url, children, className }: { url: string; childr
     </div>
   );
 }
+
