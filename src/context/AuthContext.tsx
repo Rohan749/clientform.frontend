@@ -1,10 +1,10 @@
-import type { Session, User } from "@supabase/supabase-js";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api";
+import { type AuthUser, getSession, type Session, setSession, subscribe } from "@/lib/session";
 
 interface AuthContextValue {
   session: Session | null;
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -12,39 +12,39 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setState] = useState<Session | null>(() => getSession());
 
   useEffect(() => {
-    let active = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSession(data.session);
-      setLoading(false);
-    });
-
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setLoading(false);
-    });
-
+    const unsubscribe = subscribe(setState);
     return () => {
-      active = false;
-      data.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
+
+  // Sessions created by a redirect (e.g. email confirmation) may not include the user yet.
+  const needsUser = Boolean(session && !session.user);
+  useEffect(() => {
+    if (!needsUser) return;
+    api.auth
+      .me()
+      .then((user) => {
+        const current = getSession();
+        if (current) setSession({ ...current, user });
+      })
+      .catch(() => setSession(null));
+  }, [needsUser]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
-      loading,
+      loading: needsUser,
       signOut: async () => {
-        await supabase.auth.signOut();
+        await api.auth.logout().catch(() => undefined);
+        setSession(null);
       },
     }),
-    [session, loading],
+    [session, needsUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

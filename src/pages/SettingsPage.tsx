@@ -14,7 +14,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
 import { api, errorMessage } from "@/lib/api";
 import { hostname, initials } from "@/lib/format";
-import { supabase } from "@/lib/supabase";
 import { isValidHttpUrl } from "@/lib/testimonials";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -71,7 +70,7 @@ export default function SettingsPage() {
   };
 
   const uploadAvatar = async (file: File | undefined) => {
-    if (!file || !user) return;
+    if (!file) return;
     if (!AVATAR_TYPES.includes(file.type)) {
       toast.error("Use a PNG, JPG, WebP or GIF image");
       return;
@@ -83,25 +82,9 @@ export default function SettingsPage() {
 
     setUploading(true);
     try {
-      const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
-      const path = `${user.id}/${Date.now()}.${extension}`;
-      const { error } = await supabase.storage.from("avatars").upload(path, file, {
-        contentType: file.type,
-        cacheControl: "31536000",
-      });
-      if (error) throw error;
-
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      const previous = profile?.avatar_url;
-      const updated = await api.profile.update({ avatar_url: data.publicUrl });
-      setProfile(updated);
+      // The backend stores the image and cleans up the previous one.
+      setProfile(await api.profile.uploadAvatar(file));
       toast.success("Profile image updated");
-
-      // Best-effort cleanup of the previous image in the user's folder.
-      const previousPath = previous?.split("/avatars/")[1];
-      if (previousPath?.startsWith(`${user.id}/`)) {
-        void supabase.storage.from("avatars").remove([previousPath]);
-      }
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {

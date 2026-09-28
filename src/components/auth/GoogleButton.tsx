@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
+import { googleSignInUrl } from "@/lib/api";
 
 function GoogleLogo() {
   return (
@@ -27,30 +27,30 @@ function GoogleLogo() {
 }
 
 /**
- * Starts Supabase's Google OAuth flow. The browser leaves the app, and Supabase
- * redirects back to `next` with a session that the Supabase client picks up automatically.
+ * Starts Google sign-in. The backend runs the whole OAuth flow with Supabase and sends the
+ * browser back to /auth/callback with a session, so no Supabase key is needed here.
  */
-export function GoogleButton({ next = "/dashboard", onError }: { next?: string; onError: (message: string) => void }) {
+export function GoogleButton({ next = "/dashboard" }: { next?: string; onError?: (message: string) => void }) {
   const [loading, setLoading] = useState(false);
 
-  const signIn = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}${next}`,
-        queryParams: { prompt: "select_account" },
-      },
-    });
-    // On success the page navigates away, so we only need to handle failures.
-    if (error) {
-      setLoading(false);
-      onError(error.message);
-    }
-  };
+  // Coming back via the browser's Back button restores this page from cache: re-enable the button.
+  useEffect(() => {
+    const reset = () => setLoading(false);
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
 
   return (
-    <Button type="button" variant="outline" className="h-10 w-full" onClick={signIn} disabled={loading}>
+    <Button
+      type="button"
+      variant="outline"
+      className="h-10 w-full"
+      disabled={loading}
+      onClick={() => {
+        setLoading(true);
+        window.location.assign(googleSignInUrl(next));
+      }}
+    >
       {loading ? <Loader2 className="animate-spin" /> : <GoogleLogo />}
       Continue with Google
     </Button>

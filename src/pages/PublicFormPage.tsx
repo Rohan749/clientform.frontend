@@ -4,8 +4,7 @@ import { LogoMark } from "@/components/common/Logo";
 import { FormRenderer, type SubmissionValues } from "@/components/forms/FormRenderer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/useApi";
-import { api, ApiError } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api";
 
 export default function PublicFormPage() {
   const { slug = "" } = useParams<{ slug: string }>();
@@ -17,18 +16,7 @@ export default function PublicFormPage() {
   }, [form]);
 
   const handleUpload = useCallback(
-    async (questionId: string, file: File) => {
-      const { path, token } = await api.public.createUpload(slug, {
-        question_id: questionId,
-        file_name: file.name,
-        file_size: file.size,
-      });
-      const { error: uploadError } = await supabase.storage
-        .from("submission-files")
-        .uploadToSignedUrl(path, token, file, { contentType: file.type || "application/octet-stream" });
-      if (uploadError) throw new ApiError(400, "Upload failed. Please try again.");
-      return path;
-    },
+    async (questionId: string, file: File) => (await api.public.uploadFile(slug, questionId, file)).path,
     [slug],
   );
 

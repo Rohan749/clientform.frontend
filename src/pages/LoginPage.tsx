@@ -6,7 +6,8 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { api, errorMessage } from "@/lib/api";
+import { setSession } from "@/lib/session";
 
 /** Only allow redirecting to in-app paths (prevents open redirects). */
 export function safeNext(value: string | null) {
@@ -18,22 +19,22 @@ export default function LoginPage() {
   const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Google sign-in failures come back as ?error=…
+  const [error, setError] = useState<string | null>(() => params.get("error"));
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    setLoading(false);
-    if (signInError) {
-      setError(
-        signInError.message === "Invalid login credentials" ? "That email and password don't match." : signInError.message,
-      );
-      return;
+    try {
+      setSession(await api.auth.login(email.trim(), password));
+      navigate(safeNext(params.get("next")), { replace: true });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
     }
-    navigate(safeNext(params.get("next")), { replace: true });
   };
 
   return (

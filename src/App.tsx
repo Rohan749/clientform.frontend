@@ -10,6 +10,7 @@ import { ProfileProvider } from "@/context/ProfileContext";
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const SignupPage = lazy(() => import("@/pages/SignupPage"));
+const AuthCallbackPage = lazy(() => import("@/pages/AuthCallbackPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const CreateFormPage = lazy(() => import("@/pages/CreateFormPage"));
 const FormsPage = lazy(() => import("@/pages/FormsPage"));
@@ -37,6 +38,8 @@ const router = createBrowserRouter([
       { path: "/", element: <LandingPage /> },
       { path: "/login", element: <GuestRoute><LoginPage /></GuestRoute> },
       { path: "/signup", element: <GuestRoute><SignupPage /></GuestRoute> },
+      // Google sign-in and email-confirmation links land here with a session.
+      { path: "/auth/callback", element: <AuthCallbackPage /> },
 
       // Public, client-facing form — no dashboard UI.
       { path: "/f/:slug", element: <PublicFormPage /> },

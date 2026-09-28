@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { type AuthUser, getAccessToken, type Session, setSession } from "./session";
 import type {
   DashboardData,
   FormDraft,
@@ -38,6 +38,9 @@ export class ApiError extends Error {
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
+  /** Raw file upload (sent as application/octet-stream). */
+  file?: Blob;
+  query?: Record<string, string>;
   auth?: boolean;
 }
 
@@ -45,23 +48,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-async function request<T>(path: string, { method = "GET", body, auth = true }: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  { method = "GET", body, file, query, auth = true }: RequestOptions = {},
+): Promise<T> {
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (file) headers["Content-Type"] = "application/octet-stream";
+  else if (body !== undefined) headers["Content-Type"] = "application/json";
+  const search = query ? `?${new URLSearchParams(query).toString()}` : "";
 
   if (auth) {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
+    const token = await getAccessToken();
     if (!token) throw new ApiError(401, "Your session has expired. Please log in again.");
     headers.Authorization = `Bearer ${token}`;
   }
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/api${path}`, {
+    response = await fetch(`${API_URL}/api${path}${search}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: file ?? (body === undefined ? undefined : JSON.stringify(body)),
     });
   } catch {
     throw new ApiError(0, "Can't reach the server. Check your connection and try again.");
@@ -78,6 +85,9 @@ async function request<T>(path: string, { method = "GET", body, auth = true }: R
   const payload: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
+    // The server no longer accepts this session (revoked/expired): sign out locally.
+    if (auth && response.status === 401) setSession(null);
+    if (response.status === 413) throw new ApiError(413, "That file is too large.");
     const message = isRecord(payload) && typeof payload.error === "string" ? payload.error : "Something went wrong";
     const details = isRecord(payload) && isRecord(payload.details) ? payload.details : null;
     const fields = details && isRecord(details.fields) ? (details.fields as Record<string, string>) : undefined;
@@ -94,13 +104,33 @@ export function errorMessage(error: unknown): string {
 
 type ResolvedTestimonial = Omit<Testimonial, "id">;
 
+/** Where to send the browser to start Google sign-in (handled by the backend). */
+export function googleSignInUrl(next = "/dashboard") {
+  return `${API_URL}/api/auth/google?next=${encodeURIComponent(next)}`;
+}
+
 export const api = {
+  auth: {
+    login: (email: string, password: string) =>
+      request<Session>("/auth/login", { method: "POST", body: { email, password }, auth: false }),
+    signup: (email: string, password: string, name: string) =>
+      request<{ session: Session | null; confirmation_required: boolean }>("/auth/signup", {
+        method: "POST",
+        body: { email, password, name },
+        auth: false,
+      }),
+    me: () => request<AuthUser>("/auth/me"),
+    logout: () => request<void>("/auth/logout", { method: "POST" }),
+  },
+
   dashboard: () => request<DashboardData>("/dashboard"),
 
   profile: {
     get: () => request<Profile>("/profile"),
     update: (patch: Partial<Pick<Profile, "name" | "display_name" | "website_url" | "avatar_url">>) =>
       request<Profile>("/profile", { method: "PATCH", body: patch }),
+    uploadAvatar: (file: File) =>
+      request<Profile>("/profile/avatar", { method: "POST", file, query: { type: file.type } }),
   },
 
   forms: {
@@ -134,10 +164,11 @@ export const api = {
 
   public: {
     getForm: (slug: string) => request<PublicForm>(`/public/forms/${encodeURIComponent(slug)}`, { auth: false }),
-    createUpload: (slug: string, body: { question_id: string; file_name: string; file_size: number }) =>
-      request<{ path: string; token: string }>(`/public/forms/${encodeURIComponent(slug)}/uploads`, {
+    uploadFile: (slug: string, questionId: string, file: File) =>
+      request<{ path: string }>(`/public/forms/${encodeURIComponent(slug)}/uploads`, {
         method: "POST",
-        body,
+        file,
+        query: { question_id: questionId, file_name: file.name, type: file.type || "application/octet-stream" },
         auth: false,
       }),
     submit: (slug: string, body: { name: string; email: string; answers: Record<string, string>; _hp?: string }) =>

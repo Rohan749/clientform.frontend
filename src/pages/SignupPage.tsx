@@ -6,7 +6,8 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { api, errorMessage } from "@/lib/api";
+import { setSession } from "@/lib/session";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -25,26 +26,20 @@ export default function SignupPage() {
     }
     setLoading(true);
     setError(null);
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: { name: name.trim() },
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
-    setLoading(false);
-
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
+    try {
+      const result = await api.auth.signup(email.trim(), password, name.trim());
+      // With email confirmation enabled there's no session until the link is clicked.
+      if (!result.session) {
+        setConfirmationSent(true);
+        return;
+      }
+      setSession(result.session);
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
     }
-    // With email confirmation enabled, Supabase returns no session until the link is clicked.
-    if (!data.session) {
-      setConfirmationSent(true);
-      return;
-    }
-    navigate("/dashboard", { replace: true });
   };
 
   if (confirmationSent) {

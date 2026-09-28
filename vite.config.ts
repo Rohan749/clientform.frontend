@@ -14,7 +14,6 @@ export default defineConfig({
         // Split large, rarely-changing vendors into their own long-cached chunks.
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
-          if (id.includes("@supabase")) return "supabase";
           if (/node_modules\/(react|react-dom|scheduler|react-router)\//.test(id)) return "react";
           if (id.includes("@radix-ui") || id.includes("@floating-ui")) return "radix";
           return undefined;
