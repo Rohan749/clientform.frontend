@@ -4,6 +4,8 @@
  * the backend shortly before they expire.
  */
 
+import { API_URL } from "./config";
+
 export interface AuthUser {
   id: string;
   email: string | null;
@@ -20,7 +22,6 @@ export interface Session {
 
 const STORAGE_KEY = "clientform.session";
 const REFRESH_MARGIN_SECONDS = 60;
-const API_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
 type Listener = (session: Session | null) => void;
 const listeners = new Set<Listener>();

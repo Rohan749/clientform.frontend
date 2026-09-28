@@ -1,3 +1,4 @@
+import { API_URL } from "./config";
 import { type AuthUser, getAccessToken, type Session, setSession } from "./session";
 import type {
   DashboardData,
@@ -12,7 +13,6 @@ import type {
   Testimonial,
 } from "@/types";
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
 const MISSING_API_URL =
   "The app can't reach its API. Set VITE_API_URL to your backend URL in your hosting settings and redeploy.";
