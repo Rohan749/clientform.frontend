@@ -1,0 +1,31 @@
+# Netlify configuration for the ClientForm frontend (Vite + React SPA).
+# Set VITE_* environment variables in Netlify → Site configuration → Environment variables.
+# They are baked in at build time, so redeploy after changing them.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Single-page app: serve index.html for every route so deep links like
+# /dashboard or /f/your-form work on refresh and when shared.
+# Real files (e.g. /assets/*.js, /favicon.svg) are still served first.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Vite's hashed build assets never change, so let browsers cache them for a year.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
