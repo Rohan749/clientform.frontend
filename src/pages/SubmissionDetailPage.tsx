@@ -16,14 +16,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApi } from "@/hooks/useApi";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { api, errorMessage } from "@/lib/api";
+import { queryCache, queryKeys } from "@/lib/queryCache";
 import type { SubmissionStatus } from "@/types";
 
 export default function SubmissionDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: submission, loading, error, reload, setData } = useApi(() => api.submissions.get(id), [id]);
+  const { data: submission, loading, error, reload, setData } = useCachedQuery(
+    queryKeys.submission(id),
+    () => api.submissions.get(id),
+    { staleTime: 60_000 },
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const markedRead = useRef(false);
 
@@ -33,7 +38,10 @@ export default function SubmissionDetailPage() {
     markedRead.current = true;
     api.submissions
       .updateStatus(submission.id, "reviewed")
-      .then(({ status }) => setData((prev) => (prev ? { ...prev, status } : prev)))
+      .then(({ status }) => {
+        setData((prev) => (prev ? { ...prev, status } : prev));
+        queryCache.invalidate(queryKeys.submissionLists, queryKeys.dashboard);
+      })
       .catch(() => undefined);
   }, [submission, setData]);
 
@@ -42,6 +50,7 @@ export default function SubmissionDetailPage() {
     try {
       await api.submissions.updateStatus(submission.id, status);
       setData((prev) => (prev ? { ...prev, status } : prev));
+      queryCache.invalidate(queryKeys.submissionLists, queryKeys.dashboard);
       toast.success(`Marked as ${SUBMISSION_STATUS_LABELS[status].toLowerCase()}`);
     } catch (err) {
       toast.error(errorMessage(err));
@@ -51,6 +60,8 @@ export default function SubmissionDetailPage() {
   const remove = async () => {
     try {
       await api.submissions.remove(id);
+      queryCache.remove(queryKeys.submission(id));
+      queryCache.invalidate(queryKeys.submissionLists, queryKeys.dashboard, queryKeys.forms);
       toast.success("Submission deleted");
       navigate("/submissions", { replace: true });
     } catch (err) {
@@ -79,12 +90,12 @@ export default function SubmissionDetailPage() {
             <Skeleton className="h-80 rounded-2xl" />
           </div>
         ) : error ? (
-          <ErrorState message={error} onRetry={reload} />
+          <ErrorState message={error} onRetry={() => void reload().catch(() => undefined)} />
         ) : submission ? (
           <div className="space-y-8">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <SubmissionClientCard submission={submission} />
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <Select value={submission.status} onValueChange={(value) => changeStatus(value as SubmissionStatus)}>
                   <SelectTrigger className="w-36">
                     <SelectValue />

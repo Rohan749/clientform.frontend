@@ -145,10 +145,10 @@ function Hero() {
           </BrowserFrame>
 
           {/* Callouts that name the two halves of the product */}
-          <div className="absolute top-1/2 -left-3 hidden -translate-x-full -translate-y-1/2 lg:block">
+          <div className="absolute top-1/2 -left-3 hidden -translate-x-full -translate-y-1/2 min-[1400px]:block">
             <Callout label="Your project questions" align="right" />
           </div>
-          <div className="absolute top-1/3 -right-3 hidden translate-x-full lg:block">
+          <div className="absolute top-1/3 -right-3 hidden translate-x-full min-[1400px]:block">
             <Callout label="Proof from past clients" align="left" />
           </div>
         </div>

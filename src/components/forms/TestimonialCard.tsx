@@ -48,7 +48,7 @@ export function TestimonialFallbackCard({ testimonial, className }: { testimonia
       </div>
 
       {testimonial.content && (
-        <blockquote className="mt-3 line-clamp-6 text-[13px] leading-relaxed whitespace-pre-line text-foreground/90">
+        <blockquote className="mt-3 line-clamp-6 text-[13px] leading-relaxed whitespace-pre-line wrap-anywhere text-foreground/90">
           {testimonial.content}
         </blockquote>
       )}

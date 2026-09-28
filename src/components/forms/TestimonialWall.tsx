@@ -79,11 +79,11 @@ export function TestimonialWall({
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-violet-600 to-pink-500 text-white shadow-sm">
                 <Quote className="size-4 fill-current" />
               </span>
-              {heading.trim()}
+              <span className="min-w-0 wrap-anywhere">{heading.trim()}</span>
             </h2>
           )}
           {description.trim() && (
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description.trim()}</p>
+            <p className="mt-2 text-sm leading-relaxed wrap-anywhere text-muted-foreground">{description.trim()}</p>
           )}
         </div>
       )}

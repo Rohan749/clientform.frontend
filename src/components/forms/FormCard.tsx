@@ -27,7 +27,7 @@ export function FormCard({ form, onUnpublish, onArchiveToggle, onDelete }: FormC
   const url = form.slug ? publicFormUrl(form.slug) : null;
 
   return (
-    <div className="group flex flex-col rounded-2xl border bg-card p-5 shadow-xs transition-shadow hover:shadow-md">
+    <div className="group flex min-w-0 flex-col rounded-2xl border bg-card p-5 shadow-xs transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <Link to={`/forms/${form.id}/edit`} className="min-w-0 outline-none">
           <h3 className="truncate text-[15px] font-semibold tracking-tight group-hover:underline group-hover:underline-offset-4">
@@ -35,7 +35,38 @@ export function FormCard({ form, onUnpublish, onArchiveToggle, onDelete }: FormC
           </h3>
           <p className="mt-0.5 truncate text-sm text-muted-foreground">{form.title || "No title yet"}</p>
         </Link>
-        <FormStatusPill status={form.status} />
+        <div className="flex shrink-0 items-center gap-1">
+          <FormStatusPill status={form.status} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="More actions">
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {form.status === "published" && (
+                <DropdownMenuItem onSelect={onUnpublish}>
+                  <EyeOff /> Unpublish
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={onArchiveToggle}>
+                {form.status === "archived" ? (
+                  <>
+                    <ArchiveRestore /> Restore to drafts
+                  </>
+                ) : (
+                  <>
+                    <Archive /> Archive
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                <Trash2 /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="mt-5 flex items-baseline gap-2 text-sm">
@@ -52,14 +83,14 @@ export function FormCard({ form, onUnpublish, onArchiveToggle, onDelete }: FormC
         </span>
       </div>
 
-      <div className="mt-5 flex items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" asChild>
           <Link to={`/forms/${form.id}/edit`}>
             <Pencil /> Edit
           </Link>
         </Button>
         <Button variant="outline" size="sm" disabled={!isLive} onClick={() => url && copy(url)}>
-          {copied ? <Check /> : <Copy />} Copy link
+          {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy"}
         </Button>
         {isLive && url ? (
           <Button variant="outline" size="sm" asChild>
@@ -72,36 +103,6 @@ export function FormCard({ form, onUnpublish, onArchiveToggle, onDelete }: FormC
             <ExternalLink /> Open
           </Button>
         )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="ml-auto text-muted-foreground" aria-label="More actions">
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {form.status === "published" && (
-              <DropdownMenuItem onSelect={onUnpublish}>
-                <EyeOff /> Unpublish
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onSelect={onArchiveToggle}>
-              {form.status === "archived" ? (
-                <>
-                  <ArchiveRestore /> Restore to drafts
-                </>
-              ) : (
-                <>
-                  <Archive /> Archive
-                </>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              <Trash2 /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );

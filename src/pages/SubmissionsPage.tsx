@@ -8,8 +8,9 @@ import { PageContainer } from "@/components/layout/DashboardLayout";
 import { SubmissionTable } from "@/components/submissions/SubmissionTable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApi } from "@/hooks/useApi";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/queryCache";
 import { cn } from "@/lib/utils";
 import type { SubmissionStatus } from "@/types";
 
@@ -27,11 +28,12 @@ export default function SubmissionsPage() {
   const status = (params.get("status") as SubmissionStatus | null) ?? undefined;
   const formId = params.get("form") ?? undefined;
 
-  const { data: submissions, loading, error, reload } = useApi(
+  const { data: submissions, loading, error, reload } = useCachedQuery(
+    queryKeys.submissions({ status, formId }),
     () => api.submissions.list({ status, form_id: formId }),
-    [status, formId],
+    { staleTime: 30_000 },
   );
-  const { data: forms } = useApi(() => api.forms.list(), []);
+  const { data: forms } = useCachedQuery(queryKeys.forms, () => api.forms.list(), { staleTime: 60_000 });
 
   const setParam = (key: string, value: string | undefined) => {
     const next = new URLSearchParams(params);
@@ -98,7 +100,7 @@ export default function SubmissionsPage() {
             ))}
           </div>
         ) : error ? (
-          <ErrorState message={error} onRetry={reload} />
+          <ErrorState message={error} onRetry={() => void reload().catch(() => undefined)} />
         ) : submissions && submissions.length === 0 ? (
           <EmptyState
             icon={Inbox}

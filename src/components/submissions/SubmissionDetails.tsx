@@ -22,7 +22,7 @@ function AnswerValue({ answer }: { answer: SubmissionAnswer }) {
       );
     case "email":
       return (
-        <a href={`mailto:${answer.value}`} className="text-sm underline underline-offset-4 hover:text-muted-foreground">
+        <a href={`mailto:${answer.value}`} className="text-sm break-all underline underline-offset-4 hover:text-muted-foreground">
           {answer.value}
         </a>
       );
@@ -47,17 +47,17 @@ function AnswerValue({ answer }: { answer: SubmissionAnswer }) {
     case "multiple_choice":
     case "budget":
       return (
-        <span className="inline-flex rounded-full border bg-muted/50 px-3 py-1 text-sm font-medium">{answer.value}</span>
+        <span className="inline-flex max-w-full rounded-full border bg-muted/50 px-3 py-1 text-sm font-medium wrap-anywhere">{answer.value}</span>
       );
     default:
-      return <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{answer.value}</p>;
+      return <p className="text-[15px] leading-relaxed whitespace-pre-wrap wrap-anywhere">{answer.value}</p>;
   }
 }
 
 export function SubmissionClientCard({ submission }: { submission: SubmissionDetail }) {
   return (
-    <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-      <Avatar className="size-14">
+    <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-center">
+      <Avatar className="size-14 shrink-0">
         <AvatarFallback className="bg-foreground text-lg font-semibold text-background">
           {initials(submission.name)}
         </AvatarFallback>
@@ -65,12 +65,12 @@ export function SubmissionClientCard({ submission }: { submission: SubmissionDet
       <div className="min-w-0">
         <h1 className="truncate text-2xl font-semibold tracking-tight">{submission.name}</h1>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <a href={`mailto:${submission.email}`} className="text-foreground hover:underline">
+          <a href={`mailto:${submission.email}`} className="min-w-0 break-all text-foreground hover:underline">
             {submission.email}
           </a>
           <span>·</span>
           {submission.form ? (
-            <Link to={`/forms/${submission.form.id}/edit`} className="hover:text-foreground hover:underline">
+            <Link to={`/forms/${submission.form.id}/edit`} className="min-w-0 wrap-anywhere hover:text-foreground hover:underline">
               {submission.form.name}
             </Link>
           ) : (
@@ -91,17 +91,17 @@ export function SubmissionDetails({ submission }: { submission: SubmissionDetail
         <h2 className="text-sm font-semibold">Responses</h2>
       </div>
       <dl className="divide-y">
-        <div className="grid gap-1.5 px-5 py-5 sm:grid-cols-[200px_1fr] sm:gap-6 sm:px-6">
+        <div className="grid gap-1.5 px-5 py-5 sm:grid-cols-[200px_minmax(0,1fr)] sm:gap-6 sm:px-6">
           <dt className="text-sm text-muted-foreground">Name</dt>
-          <dd className="text-[15px]">{submission.name}</dd>
+          <dd className="min-w-0 text-[15px] wrap-anywhere">{submission.name}</dd>
         </div>
-        <div className="grid gap-1.5 px-5 py-5 sm:grid-cols-[200px_1fr] sm:gap-6 sm:px-6">
+        <div className="grid gap-1.5 px-5 py-5 sm:grid-cols-[200px_minmax(0,1fr)] sm:gap-6 sm:px-6">
           <dt className="text-sm text-muted-foreground">Email</dt>
-          <dd className="text-[15px]">{submission.email}</dd>
+          <dd className="min-w-0 text-[15px] break-all">{submission.email}</dd>
         </div>
         {submission.answers.map((answer) => (
-          <div key={answer.id} className="grid gap-2 px-5 py-5 sm:grid-cols-[200px_1fr] sm:gap-6 sm:px-6">
-            <dt className="text-sm text-muted-foreground">{answer.question_label || "Untitled question"}</dt>
+          <div key={answer.id} className="grid gap-2 px-5 py-5 sm:grid-cols-[200px_minmax(0,1fr)] sm:gap-6 sm:px-6">
+            <dt className="min-w-0 text-sm text-muted-foreground wrap-anywhere">{answer.question_label || "Untitled question"}</dt>
             <dd className="min-w-0">
               <AnswerValue answer={answer} />
             </dd>

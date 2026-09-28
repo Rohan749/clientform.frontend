@@ -1,5 +1,6 @@
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { queryCache } from "@/lib/queryCache";
 import { type AuthUser, getSession, type Session, setSession, subscribe } from "@/lib/session";
 
 interface AuthContextValue {
@@ -20,6 +21,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribe();
     };
   }, []);
+
+  // Never show one account's cached data to another: clear the cache when the user changes.
+  const userId = session?.user?.id ?? null;
+  const previousUserId = useRef(userId);
+  useEffect(() => {
+    if (previousUserId.current !== userId) queryCache.clear();
+    previousUserId.current = userId;
+  }, [userId]);
 
   // Sessions created by a redirect (e.g. email confirmation) may not include the user yet.
   const needsUser = Boolean(session && !session.user);

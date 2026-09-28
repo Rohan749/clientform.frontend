@@ -230,10 +230,10 @@ export default function SettingsPage() {
       )}
 
       <Card className="mt-10">
-        <CardHeader className="flex-row items-center justify-between gap-4 space-y-0">
-          <div>
+        <CardHeader className="flex-col items-start justify-between gap-4 space-y-0 sm:flex-row sm:items-center">
+          <div className="min-w-0">
             <CardTitle>Account</CardTitle>
-            <CardDescription className="mt-1">Signed in as {user?.email}</CardDescription>
+            <CardDescription className="mt-1 break-all">Signed in as {user?.email}</CardDescription>
           </div>
           <Button
             variant="outline"

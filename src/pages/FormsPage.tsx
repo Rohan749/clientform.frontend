@@ -10,16 +10,21 @@ import { FormCard } from "@/components/forms/FormCard";
 import { PageContainer } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useApi } from "@/hooks/useApi";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { api, errorMessage } from "@/lib/api";
+import { queryCache, queryKeys } from "@/lib/queryCache";
 import type { FormSummary } from "@/types";
 
 export default function FormsPage() {
-  const { data: forms, loading, error, reload, setData } = useApi(() => api.forms.list(), []);
+  const { data: forms, loading, error, reload, setData } = useCachedQuery(queryKeys.forms, () => api.forms.list(), {
+    staleTime: 60_000,
+  });
   const [pendingDelete, setPendingDelete] = useState<FormSummary | null>(null);
 
-  const replace = (updated: Partial<FormSummary> & { id: string }) =>
+  const replace = (updated: Partial<FormSummary> & { id: string }) => {
     setData((prev) => prev?.map((f) => (f.id === updated.id ? { ...f, ...updated } : f)) ?? prev);
+    queryCache.invalidate(queryKeys.dashboard);
+  };
 
   const unpublish = async (form: FormSummary) => {
     try {
@@ -47,6 +52,8 @@ export default function FormsPage() {
     try {
       await api.forms.remove(pendingDelete.id);
       setData((prev) => prev?.filter((f) => f.id !== pendingDelete.id) ?? prev);
+      // Its submissions are gone too.
+      queryCache.invalidate(queryKeys.dashboard, queryKeys.submissionLists);
       toast.success("Form deleted");
     } catch (err) {
       toast.error(errorMessage(err));
@@ -69,13 +76,13 @@ export default function FormsPage() {
 
       <div className="mt-8">
         {loading && !forms ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-[212px] rounded-2xl" />
             ))}
           </div>
         ) : error ? (
-          <ErrorState message={error} onRetry={reload} />
+          <ErrorState message={error} onRetry={() => void reload().catch(() => undefined)} />
         ) : forms && forms.length === 0 ? (
           <EmptyState
             icon={FileText}
@@ -90,7 +97,7 @@ export default function FormsPage() {
             }
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {forms?.map((form) => (
               <FormCard
                 key={form.id}

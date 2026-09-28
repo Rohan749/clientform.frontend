@@ -7,8 +7,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProfile } from "@/context/ProfileContext";
-import { useApi } from "@/hooks/useApi";
+import { useCachedQuery } from "@/hooks/useCachedQuery";
 import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/queryCache";
 import { initials, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -21,19 +22,23 @@ function greeting() {
 
 function Stat({ label, value, icon: Icon }: { label: string; value: number; icon: typeof FileText }) {
   return (
-    <div className="rounded-2xl border p-5 shadow-xs">
+    <div className="min-w-0 rounded-2xl border p-5 shadow-xs">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{label}</span>
         <Icon className="size-4 text-muted-foreground" />
       </div>
-      <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">{value}</p>
+      <p className="mt-3 truncate text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl" title={String(value)}>
+        {value}
+      </p>
     </div>
   );
 }
 
 export default function DashboardPage() {
   const { displayName, profile } = useProfile();
-  const { data, loading, error, reload } = useApi(() => api.dashboard(), []);
+  const { data, loading, error, reload } = useCachedQuery(queryKeys.dashboard, () => api.dashboard(), {
+    staleTime: 30_000,
+  });
   const firstName = (profile?.name || displayName).split(" ")[0];
 
   const steps = data
@@ -61,7 +66,7 @@ export default function DashboardPage() {
 
       {error ? (
         <div className="mt-8">
-          <ErrorState message={error} onRetry={reload} />
+          <ErrorState message={error} onRetry={() => void reload().catch(() => undefined)} />
         </div>
       ) : loading || !data ? (
         <div className="mt-8 space-y-6">
@@ -81,8 +86,8 @@ export default function DashboardPage() {
             <Stat label="New" value={data.stats.new_submissions} icon={Sparkles} />
           </div>
 
-          <div className={cn("grid gap-6", onboarding && "lg:grid-cols-[1fr_340px]")}>
-            <section className="rounded-2xl border shadow-xs">
+          <div className={cn("grid grid-cols-1 gap-6", onboarding && "lg:grid-cols-[minmax(0,1fr)_340px]")}>
+            <section className="min-w-0 rounded-2xl border shadow-xs">
               <div className="flex items-center justify-between border-b px-5 py-4">
                 <h2 className="text-sm font-semibold">Recent submissions</h2>
                 <Button variant="ghost" size="sm" asChild className="-mr-2 text-muted-foreground">
@@ -123,7 +128,7 @@ export default function DashboardPage() {
             </section>
 
             {onboarding && (
-              <section className="rounded-2xl border p-5 shadow-xs">
+              <section className="min-w-0 rounded-2xl border p-5 shadow-xs">
                 <h2 className="text-sm font-semibold">Get set up</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Three steps to your first client request.</p>
                 <ol className="mt-5 space-y-2">

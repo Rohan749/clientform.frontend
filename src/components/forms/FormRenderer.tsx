@@ -155,18 +155,25 @@ export function FormRenderer({
   };
 
   return (
-    <div className="@container w-full bg-neutral-50 text-foreground">
-      <div className="mx-auto w-full max-w-6xl px-3 py-4 @md:px-6 @md:py-8 @5xl:py-14">
+    // Full-height column: the page always fills the screen (or the preview frame), so short
+    // states like the thank-you message don't leave the page half empty.
+    <div
+      className={cn(
+        "@container flex w-full flex-col bg-neutral-50 text-foreground",
+        isPreview ? "min-h-full" : "min-h-dvh",
+      )}
+    >
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 py-4 @md:px-6 @md:py-8 @5xl:py-14">
         <div
           className={cn(
-            "grid gap-4 @md:gap-6",
+            "grid flex-1 gap-4 @md:gap-6",
             hasTestimonials && "@4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]",
           )}
         >
           {/* Left: the form */}
-          <div className="min-w-0 rounded-2xl   p-6 shadow-xs @2xl:p-10">
+          <div className="flex min-w-0 flex-col rounded-2xl   p-6 shadow-xs @2xl:p-10">
             <BrandHeader branding={branding} />
-            <div className="mt-8">
+            <div className="mt-8 flex flex-1 flex-col">
             {submitted ? (
               <SuccessState name={name} email={email} brandName={brandName} />
             ) : (
@@ -174,11 +181,11 @@ export function FormRenderer({
                 <header>
                   {/* Near-black title that fades into purple → pink at the very end.
                       w-fit keeps the gradient the width of the text, not the whole column. */}
-                  <h1 className="w-fit max-w-full bg-linear-to-r from-neutral-950 from-55% via-violet-700 via-85% to-pink-500 bg-clip-text pb-1 text-3xl font-semibold tracking-tight text-balance text-transparent @2xl:text-4xl">
+                  <h1 className="w-fit max-w-full bg-linear-to-r from-neutral-950 from-55% via-violet-700 via-85% to-pink-500 bg-clip-text pb-1 text-3xl font-semibold tracking-tight text-balance wrap-anywhere text-transparent @2xl:text-4xl">
                     {title.trim() || "Untitled form"}
                   </h1>
                   {description.trim() && (
-                    <p className="mt-3 max-w-xl text-[15px] leading-relaxed whitespace-pre-line text-muted-foreground">
+                    <p className="mt-3 max-w-xl text-[15px] leading-relaxed whitespace-pre-line wrap-anywhere text-muted-foreground">
                       {description}
                     </p>
                   )}
@@ -514,16 +521,17 @@ function FileInput({
 function SuccessState({ name, email, brandName }: { name: string; email: string; brandName: string | null }) {
   const firstName = name.trim().split(/\s+/)[0];
   return (
-    <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500">
+    // Centred vertically in the card, which stretches to fill the screen.
+    <div className="flex flex-1 flex-col justify-center py-10 animate-in fade-in-0 slide-in-from-bottom-2 duration-500">
       <div className="flex size-12 items-center justify-center rounded-full bg-foreground text-background">
         <Check className="size-5" />
       </div>
-      <h1 className="mt-6 text-3xl font-semibold tracking-tight @2xl:text-4xl">
+      <h1 className="mt-6 text-3xl font-semibold tracking-tight wrap-anywhere @2xl:text-4xl">
         Thanks{firstName ? `, ${firstName}` : ""}. Your request is in.
       </h1>
       <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
         {brandName ?? "The team"} will review your project and get back to you at{" "}
-        <span className="font-medium text-foreground">{email}</span>.
+        <span className="font-medium break-all text-foreground">{email}</span>.
       </p>
     </div>
   );
