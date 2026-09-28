@@ -1,15 +1,11 @@
 import {
-  ArrowDown,
   ArrowRight,
   Check,
   Eye,
-  FileText,
   Link2,
+  MessageCircle,
   MessageSquareQuote,
-  MousePointerClick,
-  Search,
   Sparkles,
-  ThumbsUp,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
@@ -19,7 +15,7 @@ import { ProviderIcon } from "@/components/forms/TestimonialCard";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MiniForm } from "@/components/marketing/MiniForm";
 import { ProofPanel } from "@/components/marketing/ProofPanel";
-import { Reveal } from "@/components/marketing/Reveal";
+import { Reveal, useInView } from "@/components/marketing/Reveal";
 import { SampleTestimonialCard } from "@/components/marketing/SampleTestimonialCard";
 import { SAMPLE_TESTIMONIALS } from "@/components/marketing/samples";
 import { Button } from "@/components/ui/button";
@@ -30,24 +26,26 @@ import type { TestimonialProvider } from "@/types";
 // Copy
 // ---------------------------------------------------------------------------
 
-const JOURNEY: Array<{ icon: typeof Search; text: string }> = [
-  { icon: Search, text: "They find your work." },
-  { icon: ThumbsUp, text: "They like what they see." },
-  { icon: MousePointerClick, text: "They click “Work with me.”" },
-  { icon: FileText, text: "They land on a generic form." },
+/** What a potential client quietly wonders before starting a project (shown as speech bubbles). */
+const CLIENT_DOUBTS: Array<{ text: string; indent: string }> = [
+  { text: "Can they really do the job?", indent: "ml-0" },
+  { text: "Will they get what I want?", indent: "ml-6 sm:ml-10" },
+  { text: "Will they be easy to work with?", indent: "ml-2 sm:ml-4" },
+  { text: "Will they finish on time?", indent: "ml-8 sm:ml-14" },
+  { text: "Have they done this before?", indent: "ml-3 sm:ml-6" },
 ];
 
 const STEPS = [
-  { title: "Create your project form", body: "Build the questions you need from your clients." },
-  { title: "Add your best testimonials", body: "Bring in testimonials from X, Senja and Testimonial.to." },
-  { title: "Share your ClientForm link", body: "Send one clean project request link to potential clients." },
-  { title: "Let the form build trust", body: "Clients see your proof while they tell you about their project." },
+  { title: "Make your project form", body: "Add the questions you want to ask." },
+  { title: "Add your best reviews", body: "Bring them in from X, Senja or Testimonial.to." },
+  { title: "Share your link", body: "Send one link to new clients." },
+  { title: "Let your reviews help", body: "Clients see your reviews while they tell you about their project." },
 ];
 
 const SOURCES: Array<{ id: TestimonialProvider; name: string; paste: string }> = [
-  { id: "x", name: "X", paste: "Paste a link to a post where a client praised your work." },
-  { id: "senja", name: "Senja", paste: "Paste your Senja widget link or embed code." },
-  { id: "testimonial_to", name: "Testimonial.to", paste: "Paste your Wall of Love embed code or link." },
+  { id: "x", name: "X", paste: "Paste a link to a post where a client said nice things about you." },
+  { id: "senja", name: "Senja", paste: "Paste your Senja widget link or code." },
+  { id: "testimonial_to", name: "Testimonial.to", paste: "Paste your Wall of Love link or code." },
 ];
 
 const AUDIENCE = [
@@ -61,10 +59,10 @@ const AUDIENCE = [
 ];
 
 const INCLUDED = [
-  "Unlimited project forms",
-  "Testimonials from X, Senja and Testimonial.to",
-  "File uploads up to 10 MB",
-  "Your own shareable link",
+  "As many forms as you want",
+  "Reviews from X, Senja and Testimonial.to",
+  "Clients can send files up to 10 MB",
+  "Your own link to share",
 ];
 
 // ---------------------------------------------------------------------------
@@ -93,7 +91,7 @@ function Accent({ children }: { children: ReactNode }) {
 function ExampleNote({ className }: { className?: string }) {
   return (
     <p className={cn("text-center text-xs text-muted-foreground", className)}>
-      Example form. Studio and testimonials shown are samples.
+      Example form. The studio and reviews are made up.
     </p>
   );
 }
@@ -110,15 +108,15 @@ function Hero() {
         <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-700">
           <span className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground shadow-xs">
             <span className="size-1.5 rounded-full bg-success" />
-            For freelancers, designers & creative studios
+            For freelancers, designers and studios
           </span>
           <h1 className="mx-auto mt-7 max-w-3xl text-4xl font-semibold tracking-[-0.035em] text-balance sm:text-6xl sm:leading-[1.05]">
-            Your client form should <Accent>build trust, too.</Accent>
+            Just a form <Accent>that builds trust.</Accent>
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-balance text-muted-foreground sm:text-lg">
-            Potential clients are already interested in your work. Don't lose them at the form. ClientForm shows your
-            best client testimonials while they fill out your project request.
-          </p>
+          <div className="mx-auto mt-6 max-w-3xl text-base leading-relaxed text-balance text-muted-foreground sm:text-sm">
+            Don't lose clients at your form. You already have testimonials. Show them where they matter.
+ClientForm lets you add testimonials to your project forms, so clients feel more confident before they submit.
+          </div>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg" className="w-full sm:w-auto">
               <Link to="/signup">
@@ -146,10 +144,10 @@ function Hero() {
 
           {/* Callouts that name the two halves of the product */}
           <div className="absolute top-1/2 -left-3 hidden -translate-x-full -translate-y-1/2 min-[1400px]:block">
-            <Callout label="Your project questions" align="right" />
+            <Callout label="Your questions" align="right" />
           </div>
           <div className="absolute top-1/3 -right-3 hidden translate-x-full min-[1400px]:block">
-            <Callout label="Proof from past clients" align="left" />
+            <Callout label="Reviews from past clients" align="left" />
           </div>
         </div>
         <ExampleNote className="mt-6" />
@@ -192,63 +190,88 @@ function Problem() {
       <div className="mx-auto grid max-w-6xl gap-14 px-5 py-24 sm:px-8 lg:grid-cols-2 lg:items-center">
         <Reveal>
           <Eyebrow>The problem</Eyebrow>
-          <SectionTitle>Getting the inquiry is only the first step.</SectionTitle>
+          <SectionTitle>There's a gap between “I love this” and “Let's work together.”</SectionTitle>
           <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-muted-foreground">
+            <p>A client finds your work and likes it. Then they click your link to start a project.</p>
             <p>
-              Your portfolio does a great job. It makes people want to work with you. Then they click your link and
-              land on a form.
+              Now you ask them for real things. Their budget. Their deadline. Details about their business. That
+              takes time, and it takes trust.
             </p>
-            <p>
-              Most forms are built to collect information, and they do that well. But the trust your work just built
-              stops there. Now a stranger is asking for their budget, their timeline and their project, with nothing
-              reminding them why they came.
-            </p>
+            <p>So far, they've only seen your work. They don't know yet what it's like to work with you.</p>
             <p className="font-medium text-foreground">
-              Form builders solve form creation. ClientForm focuses on the trust around project intake.
+              Reviews from past clients fill that gap. They show that other people worked with you and were happy.
+              ClientForm puts those reviews right next to your form.
             </p>
           </div>
         </Reveal>
 
         <Reveal delay={120}>
-          <ol className="relative mx-auto max-w-sm">
-            {JOURNEY.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex flex-col items-center">
-                <div className="flex w-full items-center gap-3 rounded-xl border bg-background px-4 py-3 shadow-xs">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <Icon className="size-4 text-muted-foreground" />
-                  </div>
-                  <span className="text-sm">{text}</span>
-                </div>
-                <ArrowDown className="my-1.5 size-4 text-muted-foreground/50" />
-              </li>
-            ))}
-            <li className="rounded-xl border-2 border-foreground bg-background px-4 py-4 shadow-sm">
-              <p className="text-sm font-semibold">Now they're being asked to trust you with their project.</p>
-              <p className="mt-1 text-xs text-muted-foreground">This is the moment a generic form leaves empty.</p>
-            </li>
-          </ol>
+          <ClientThoughts />
         </Reveal>
       </div>
     </section>
   );
 }
 
+/** The client's unspoken doubts, shown as a loose stack of speech bubbles. */
+function ClientThoughts() {
+  // The whole card triggers once, then the bubbles appear one after another.
+  const [ref, inView] = useInView<HTMLDivElement>();
+
+  return (
+    <div ref={ref} className="mx-auto w-full max-w-md rounded-3xl border bg-neutral-50/70 p-5 sm:p-6">
+      <div className="flex items-center gap-2.5">
+        <div className="flex size-8 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background">
+          <MessageCircle className="size-4" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold">What your client is thinking</p>
+          <p className="text-xs text-muted-foreground">Right before they fill out your form</p>
+        </div>
+      </div>
+
+      <ul className="mt-6 space-y-2.5" aria-label="Questions a potential client asks">
+        {CLIENT_DOUBTS.map((doubt, index) => (
+          <li
+            key={doubt.text}
+            style={{ transitionDelay: `${250 + index * 120}ms` }}
+            className={cn(
+              "flex transition-all duration-500 ease-out motion-reduce:transition-none",
+              doubt.indent,
+              inView ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100",
+            )}
+          >
+            <span className="inline-block max-w-full rounded-2xl rounded-bl-md border bg-background px-4 py-2.5 text-sm shadow-xs">
+              {doubt.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-6 rounded-2xl border-2 border-foreground bg-background px-4 py-4">
+        <p className="text-sm font-semibold">A plain form can't answer these.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Your past clients can.</p>
+      </div>
+    </div>
+  );
+}
+
 function TrustSection() {
   const points = [
-    { icon: Eye, text: "Your testimonials stay beside the form, from the first question to submit." },
-    { icon: Sparkles, text: "When you have lots of proof, it scrolls gently on its own." },
-    { icon: MessageSquareQuote, text: "It uses testimonials you already have. No new tool to learn." },
+    { icon: Eye, text: "Your reviews stay next to the form, from the first question to the last." },
+    { icon: Sparkles, text: "Got lots of reviews? They scroll by slowly on their own." },
+    { icon: MessageSquareQuote, text: "Use the reviews you already have. Nothing new to learn." },
   ];
 
   return (
     <section id="features" className="scroll-mt-20 border-b bg-neutral-50/60">
       <div className="mx-auto grid max-w-6xl gap-14 px-5 py-24 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center">
         <Reveal>
-          <Eyebrow>The trust layer</Eyebrow>
-          <SectionTitle>Keep the proof visible while they fill out the form.</SectionTitle>
+          <Eyebrow>Why it works</Eyebrow>
+          <SectionTitle>Show your reviews while they fill out the form.</SectionTitle>
           <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground">
-            Your past clients have already done the convincing. Put their words where potential clients need them
-            most: right next to the questions about budget and timeline.
+            Your past clients already said great things about you. Put their words right next to the questions about
+            budget and time.
           </p>
           <ul className="mt-8 space-y-4">
             {points.map(({ icon: Icon, text }) => (
@@ -284,9 +307,9 @@ function BeforeAfter() {
       <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
           <Eyebrow>Before and after</Eyebrow>
-          <SectionTitle>Same project questions. More trust.</SectionTitle>
+          <SectionTitle>Same questions. More trust.</SectionTitle>
           <p className="mt-4 text-[15px] text-muted-foreground">
-            You still ask everything you need. The difference is what your client sees while they answer.
+            You still ask the same things. The only change is what your client sees.
           </p>
         </Reveal>
 
@@ -294,19 +317,19 @@ function BeforeAfter() {
           <Reveal>
             <div className="flex h-full flex-col rounded-3xl border bg-neutral-50/70 p-5">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm font-semibold">A generic form</span>
+                <span className="text-sm font-semibold">A plain form</span>
                 <span className="rounded-full border bg-background px-2.5 py-0.5 text-xs text-muted-foreground">Before</span>
               </div>
               <div className="flex flex-1 flex-col gap-3">
                 <MiniForm variant="plain" compact className="saturate-0" />
                 <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center">
-                  <p className="text-sm font-medium text-muted-foreground">Nothing here to reassure them.</p>
+                  <p className="text-sm font-medium text-muted-foreground">Nothing here to help them trust you.</p>
                   <p className="mt-1 max-w-56 text-xs text-muted-foreground/80">
-                    No proof, no reminder of your work. Just fields and a submit button.
+                    No reviews. No reminder of your work. Just boxes and a button.
                   </p>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-muted-foreground">Neutral and transactional. It collects details and nothing more.</p>
+              <p className="mt-4 text-sm text-muted-foreground">It asks for details. That's all it does.</p>
             </div>
           </Reveal>
 
@@ -321,7 +344,7 @@ function BeforeAfter() {
                 <ProofPanel testimonials={SAMPLE_TESTIMONIALS.slice(0, 3)} compact />
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
-                The same questions, with proof from past clients right beside them.
+                The same questions, with reviews from past clients right next to them.
               </p>
             </div>
           </Reveal>
@@ -363,11 +386,11 @@ function Sources() {
     <section className="border-b">
       <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
         <Reveal className="max-w-2xl">
-          <Eyebrow>Testimonial sources</Eyebrow>
-          <SectionTitle>Your testimonials already exist. Put them where they matter.</SectionTitle>
+          <Eyebrow>Where reviews come from</Eyebrow>
+          <SectionTitle>You already have reviews. Put them where they count.</SectionTitle>
           <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
-            Bring your existing client proof into the project request, instead of sending potential clients to a
-            separate testimonial page. ClientForm doesn't collect testimonials. It shows the ones you already have.
+            Don't send new clients to another page to find them. Show them on your project form. ClientForm doesn't
+            collect reviews. It shows the ones you already have.
           </p>
         </Reveal>
 
@@ -408,8 +431,8 @@ function Pricing() {
       <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
         <Reveal className="mx-auto max-w-md text-center">
           <Eyebrow>Pricing</Eyebrow>
-          <SectionTitle>Free during early access.</SectionTitle>
-          <p className="mt-3 text-muted-foreground">Everything included while we build ClientForm with our first users.</p>
+          <SectionTitle>Free for early users.</SectionTitle>
+          <p className="mt-3 text-muted-foreground">You get every feature for free while we build ClientForm.</p>
         </Reveal>
         <Reveal delay={100} className="mx-auto mt-10 max-w-md">
           <div className="rounded-2xl border bg-background p-7 shadow-sm">
@@ -443,11 +466,10 @@ function FinalCta() {
       <div className="mx-auto max-w-6xl px-5 py-28 text-center sm:px-8">
         <Reveal>
           <h2 className="mx-auto max-w-3xl text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Turn your next project inquiry into a <Accent>better first impression.</Accent>
+            Make a <Accent>great first impression</Accent> on your next client.
           </h2>
           <p className="mx-auto mt-5 max-w-lg text-muted-foreground">
-            Build a project form that collects the details you need and shows potential clients why they can trust
-            you.
+            Build a form that asks what you need and shows why clients can trust you.
           </p>
           <Button asChild size="lg" className="mt-9">
             <Link to="/signup">

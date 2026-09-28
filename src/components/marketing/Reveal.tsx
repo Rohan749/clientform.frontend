@@ -1,22 +1,22 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-/** Fades content up once as it scrolls into view. Respects reduced-motion preferences. */
-export function Reveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+/** True once the element has scrolled into view (stays true). */
+export function useInView<T extends Element>(): [RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null);
+  const [inView, setInView] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     if (typeof IntersectionObserver === "undefined") {
-      setVisible(true);
+      setInView(true);
       return;
     }
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          setVisible(true);
+          setInView(true);
           observer.disconnect();
         }
       },
@@ -25,6 +25,13 @@ export function Reveal({ children, className, delay = 0 }: { children: ReactNode
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  return [ref, inView];
+}
+
+/** Fades content up once as it scrolls into view. Respects reduced-motion preferences. */
+export function Reveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const [ref, visible] = useInView<HTMLDivElement>();
 
   return (
     <div

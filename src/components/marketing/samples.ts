@@ -17,28 +17,28 @@ export const SAMPLE_TESTIMONIALS: SampleTestimonial[] = [
     source: "x",
     name: "Maya Chen",
     role: "Founder, Northwind",
-    quote: "Juno turned our messy product idea into a 60-second demo people actually finish watching.",
+    quote: "Juno turned our messy idea into a short demo video. People actually watch the whole thing.",
   },
   {
     id: "daniel",
     source: "senja",
     name: "Daniel Okafor",
     role: "Head of Brand, Lumen",
-    quote: "Clear process, sharp motion, zero back-and-forth. We've booked Juno for three launches now.",
+    quote: "Clear steps, great motion, no back-and-forth. We've hired Juno three times now.",
   },
   {
     id: "sara",
     source: "testimonial_to",
     name: "Sara Lindqvist",
     role: "Marketing Lead, Atlas",
-    quote: "Our explainer video finally made the product click for customers. Fast, friendly, and easy to work with.",
+    quote: "Our new video made our product easy to understand. Fast, friendly, and easy to work with.",
   },
   {
     id: "leo",
     source: "x",
     name: "Leo Martins",
     role: "Co-founder, Fieldnote",
-    quote: "They understood our brand in the first call. The identity still feels right a year later.",
+    quote: "They got our brand on the first call. It still feels right a year later.",
   },
 ];
 
