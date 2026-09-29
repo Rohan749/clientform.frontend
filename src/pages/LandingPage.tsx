@@ -136,7 +136,7 @@ ClientForm lets you add testimonials to your project forms, so clients feel more
       <div className="relative px-5 pb-20 sm:px-8 animate-in fade-in-0 slide-in-from-bottom-4 delay-150 duration-1000 fill-mode-backwards">
         <div className="relative mx-auto max-w-5xl">
           <div className="pointer-events-none absolute -inset-x-10 -inset-y-10 -z-10 rounded-[40px] bg-dotted opacity-70 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
-          <BrowserFrame url="clientform.com/f/juno-studio" className="shadow-2xl shadow-black/[0.07]">
+          <BrowserFrame url="clientform.space/f/juno-studio" className="shadow-2xl shadow-black/[0.07]">
             <div className="grid gap-4 bg-neutral-50 p-3 sm:p-5 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
               <MiniForm />
               <div className="relative h-[420px] md:h-auto">
@@ -507,7 +507,7 @@ function ProSection() {
               ))}
             </div>
 
-            <BrowserFrame url="clientform.com/f/juno-studio" className="shadow-xl shadow-black/[0.06]">
+            <BrowserFrame url="clientform.space/f/juno-studio" className="shadow-xl shadow-black/[0.06]">
               <div
                 className="cf-root relative bg-neutral-50 p-3 transition-[background] duration-500 sm:p-5"
                 style={themed?.style}

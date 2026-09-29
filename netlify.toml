@@ -9,6 +9,15 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# The custom domain is the only public address: send the old Netlify address there,
+# keeping the path and query (e.g. shared /f/<slug> links). Must come before the SPA rule.
+# Deploy previews (deploy-preview-N--…) have a different host, so they're unaffected.
+[[redirects]]
+  from = "https://clientformfrontend.netlify.app/*"
+  to = "https://clientform.space/:splat"
+  status = 301
+  force = true
+
 # Single-page app: serve index.html for every route so deep links like
 # /dashboard or /f/your-form work on refresh and when shared.
 # Real files (e.g. /assets/*.js, /favicon.svg) are still served first.
