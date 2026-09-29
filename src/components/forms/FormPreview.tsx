@@ -1,6 +1,7 @@
 import { Monitor, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { publicFormPrefix } from "@/lib/links";
+import { isDefaultTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import type { Branding, FormDraft } from "@/types";
 import { BrowserFrame } from "./BrowserFrame";
@@ -16,12 +17,25 @@ const DEVICES: Array<{ value: Device; label: string; icon: typeof Monitor }> = [
 /**
  * Full client-facing preview (form + testimonials) in a browser frame. The renderer
  * uses container queries, so the Desktop/Mobile toggle shows the real responsive layout.
+ * `pro` decides whether the design is shown, exactly like on the live form.
  */
-export function FormPreview({ draft, branding, slug }: { draft: FormDraft; branding: Branding; slug: string | null }) {
+export function FormPreview({
+  draft,
+  branding,
+  slug,
+  pro,
+  className,
+}: {
+  draft: FormDraft;
+  branding: Branding;
+  slug: string | null;
+  pro: boolean;
+  className?: string;
+}) {
   const [device, setDevice] = useState<Device>("desktop");
 
   return (
-    <div className="flex h-full min-h-0 flex-col items-center px-3 pt-4 pb-4 sm:px-6 sm:pb-6">
+    <div className={cn("flex h-full min-h-0 flex-col items-center px-3 pt-4 pb-4 sm:px-6 sm:pb-6", className)}>
       <div className="mb-4 inline-flex rounded-lg bg-muted p-1" role="tablist" aria-label="Preview device">
         {DEVICES.map(({ value, label, icon: Icon }) => (
           <button
@@ -57,6 +71,8 @@ export function FormPreview({ draft, branding, slug }: { draft: FormDraft; brand
           testimonialsHeading={draft.testimonials_heading}
           testimonialsDescription={draft.testimonials_description}
           branding={branding}
+          theme={pro && !isDefaultTheme(draft.theme) ? draft.theme : null}
+          showBadge={!(pro && draft.theme.white_label)}
         />
       </BrowserFrame>
     </div>

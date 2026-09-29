@@ -99,6 +99,7 @@ export const queryCache = {
 /** Cache keys used across the dashboard, in one place so invalidation stays consistent. */
 export const queryKeys = {
   dashboard: "dashboard",
+  billing: "billing",
   forms: "forms",
   submissions: (filters: { status?: string; formId?: string } = {}) =>
     `submissions:list:${filters.status ?? "all"}:${filters.formId ?? "all"}`,

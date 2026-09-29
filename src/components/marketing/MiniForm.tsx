@@ -95,7 +95,7 @@ export function MiniForm({
 
       <p
         className={cn(
-          "font-semibold tracking-tight",
+          "cf-title font-semibold tracking-tight",
           compact ? "text-sm" : "text-xl",
           !plain && (compact ? "mt-3" : "mt-5"),
           !plain &&

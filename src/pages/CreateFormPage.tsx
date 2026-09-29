@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ErrorState } from "@/components/common/ErrorState";
 import { BuilderHeader } from "@/components/forms/BuilderHeader";
+import { DesignPanel } from "@/components/forms/DesignPanel";
 import type { BuilderTab } from "@/components/forms/BuilderTabs";
 import { FormBuilder } from "@/components/forms/FormBuilder";
 import { FormPreview } from "@/components/forms/FormPreview";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProfile } from "@/context/ProfileContext";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
+import { usePlan } from "@/hooks/usePlan";
 import { errorMessage } from "@/lib/api";
 import type { FormWithContent } from "@/types";
 
@@ -33,9 +35,11 @@ function FormEditor() {
   const navigate = useNavigate();
   const { branding } = useProfile();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab: BuilderTab = searchParams.get("view") === "preview" ? "preview" : "edit";
+  const view = searchParams.get("view");
+  const tab: BuilderTab = view === "preview" || view === "design" ? view : "edit";
+  const { isPro, loading: planLoading } = usePlan();
   const setTab = (next: BuilderTab) => {
-    setSearchParams(next === "preview" ? { view: "preview" } : {}, { replace: true });
+    setSearchParams(next === "edit" ? {} : { view: next }, { replace: true });
     window.scrollTo({ top: 0 });
   };
 
@@ -168,9 +172,23 @@ function FormEditor() {
             onChangeSlug={handleChangeSlug}
           />
         </div>
+      ) : tab === "design" ? (
+        <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+          <div className="border-b lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0">
+            <DesignPanel
+              theme={builder.draft.theme}
+              onChange={(theme) => builder.update({ theme })}
+              pro={isPro}
+              planLoading={planLoading}
+            />
+          </div>
+          <div className="flex flex-col bg-neutral-50/70 lg:min-h-0">
+            <FormPreview draft={builder.draft} branding={branding} slug={builder.meta?.slug ?? null} pro={isPro} />
+          </div>
+        </div>
       ) : (
         <div className="flex flex-1 flex-col bg-neutral-50/70 lg:min-h-0">
-          <FormPreview draft={builder.draft} branding={branding} slug={builder.meta?.slug ?? null} />
+          <FormPreview draft={builder.draft} branding={branding} slug={builder.meta?.slug ?? null} pro={isPro} />
         </div>
       )}
 

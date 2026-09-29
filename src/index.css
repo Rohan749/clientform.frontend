@@ -91,3 +91,20 @@
   background-image: radial-gradient(circle at 1px 1px, oklch(0.87 0 0) 1px, transparent 0);
   background-size: 20px 20px;
 }
+
+/*
+ * ClientForm Pro themes. A themed form sets CSS variables on .cf-root (see lib/theme.ts).
+ * These rules adapt the few hard-coded brand colors to the theme. :where() keeps their
+ * specificity low, so a form owner's custom CSS can still override them.
+ */
+:where(.cf-root[data-cf-colors]) .cf-title {
+  background-image: linear-gradient(to right, var(--foreground) 55%, var(--primary));
+}
+:where(.cf-root[data-cf-colors]) .cf-testimonials {
+  background: color-mix(in oklab, var(--primary) 7%, var(--background));
+  border-color: var(--border);
+}
+:where(.cf-root[data-cf-colors]) .cf-testimonials-icon {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}

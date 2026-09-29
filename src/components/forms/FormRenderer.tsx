@@ -1,16 +1,18 @@
 import { ArrowRight, ArrowUpRight, Check, FileText, Loader2, RotateCw, Upload, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { LogoMark } from "@/components/common/Logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useGoogleFonts } from "@/hooks/useGoogleFonts";
 import { ApiError, errorMessage } from "@/lib/api";
 import { formatBytes, hostname, initials } from "@/lib/format";
 import { QUESTION_TYPE_META } from "@/lib/questions";
+import { customCssProblem, fontById, googleFontsHref, scopeCss, themeStyle } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import type { Branding, Question, Testimonial } from "@/types";
+import type { Branding, FormTheme, Question, Testimonial } from "@/types";
 import { TestimonialWall } from "./TestimonialWall";
 
 export interface SubmissionValues {
@@ -37,6 +39,10 @@ interface FormRendererProps {
   mode: "preview" | "live";
   /** Load real X embeds (disable for static marketing samples). */
   embedTestimonials?: boolean;
+  /** Pro design; null/undefined renders the standard ClientForm look. */
+  theme?: FormTheme | null;
+  /** The floating "Powered by ClientForm" badge (hidden only by Pro white labeling). */
+  showBadge?: boolean;
   onSubmit?: (values: SubmissionValues) => Promise<void>;
   /** Uploads a file for a question and resolves to its storage path. */
   onUpload?: (questionId: string, file: File) => Promise<string>;
@@ -57,6 +63,8 @@ export function FormRenderer({
   branding,
   mode,
   embedTestimonials = true,
+  theme = null,
+  showBadge = true,
   onSubmit,
   onUpload,
 }: FormRendererProps) {
@@ -72,6 +80,14 @@ export function FormRenderer({
   const isPreview = mode === "preview";
   const hasTestimonials = testimonials.length > 0;
   const brandName = branding.name?.trim() || null;
+
+  const themed = useMemo(() => {
+    if (!theme) return null;
+    const { style, customColors } = themeStyle(theme);
+    const css = theme.custom_css.trim() && !customCssProblem(theme.custom_css) ? scopeCss(theme.custom_css) : "";
+    return { style, customColors, css };
+  }, [theme]);
+  useGoogleFonts(theme ? googleFontsHref([fontById(theme.font)]) : null);
 
   const setAnswer = (id: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -157,13 +173,24 @@ export function FormRenderer({
   return (
     // Full-height column: the page always fills the screen (or the preview frame), so short
     // states like the thank-you message don't leave the page half empty.
+    <>
     <div
       className={cn(
-        "@container flex w-full flex-col bg-neutral-50 text-foreground",
+        "cf-root @container flex w-full flex-col bg-neutral-50 text-foreground",
         isPreview ? "min-h-full" : "min-h-dvh",
       )}
+      style={themed?.style}
+      data-cf-colors={themed?.customColors ? "" : undefined}
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 py-4 @md:px-6 @md:py-8 @5xl:py-14">
+      {/* The owner's custom CSS, scoped to this form (validated on save and again here). */}
+      {themed?.css ? <style>{themed.css}</style> : null}
+      <div
+        className={cn(
+          "cf-page mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 py-4 @md:px-6 @md:py-8 @5xl:py-14",
+          // Room for the floating badge so it never covers the send button at the very end.
+          showBadge && "pb-20 @md:pb-20 @5xl:pb-20",
+        )}
+      >
         <div
           className={cn(
             "grid flex-1 gap-4 @md:gap-6",
@@ -171,27 +198,27 @@ export function FormRenderer({
           )}
         >
           {/* Left: the form */}
-          <div className="flex min-w-0 flex-col rounded-2xl   p-6 shadow-xs @2xl:p-10">
+          <div className="cf-card flex min-w-0 flex-col rounded-2xl   p-6 shadow-xs @2xl:p-10">
             <BrandHeader branding={branding} />
             <div className="mt-8 flex flex-1 flex-col">
             {submitted ? (
               <SuccessState name={name} email={email} brandName={brandName} />
             ) : (
               <>
-                <header>
+                <header className="cf-header">
                   {/* Near-black title that fades into purple → pink at the very end.
                       w-fit keeps the gradient the width of the text, not the whole column. */}
-                  <h1 className="w-fit max-w-full bg-linear-to-r from-neutral-950 from-55% via-violet-700 via-85% to-pink-500 bg-clip-text pb-1 text-3xl font-semibold tracking-tight text-balance wrap-anywhere text-transparent @2xl:text-4xl">
+                  <h1 className="cf-title w-fit max-w-full bg-linear-to-r from-neutral-950 from-55% via-violet-700 via-85% to-pink-500 bg-clip-text pb-1 text-3xl font-semibold tracking-tight text-balance wrap-anywhere text-transparent @2xl:text-4xl">
                     {title.trim() || "Untitled form"}
                   </h1>
                   {description.trim() && (
-                    <p className="mt-3 max-w-xl text-[15px] leading-relaxed whitespace-pre-line wrap-anywhere text-muted-foreground">
+                    <p className="cf-description mt-3 max-w-xl text-[15px] leading-relaxed whitespace-pre-line wrap-anywhere text-muted-foreground">
                       {description}
                     </p>
                   )}
                 </header>
 
-                <form className="mt-10 space-y-7" onSubmit={handleSubmit} noValidate>
+                <form className="cf-form mt-10 space-y-7" onSubmit={handleSubmit} noValidate>
                   {/* Honeypot: hidden from people, tempting for bots */}
                   <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
                     <label>
@@ -212,7 +239,7 @@ export function FormRenderer({
                           if (errors.name) setErrors(({ name: _n, ...rest }) => rest);
                         }}
                         aria-invalid={Boolean(errors.name)}
-                        className="h-11"
+                        className="cf-input h-11"
                       />
                     </Field>
                     <Field id="email" label="Email" required error={errors.email}>
@@ -227,7 +254,7 @@ export function FormRenderer({
                           if (errors.email) setErrors(({ email: _e, ...rest }) => rest);
                         }}
                         aria-invalid={Boolean(errors.email)}
-                        className="h-11"
+                        className="cf-input h-11"
                       />
                     </Field>
                   </div>
@@ -252,12 +279,12 @@ export function FormRenderer({
                   ))}
 
                   <div className="pt-2">
-                    <Button type="submit" size="lg" className="h-12 w-full text-[15px] @lg:w-auto" disabled={submitting}>
+                    <Button type="submit" size="lg" className="cf-submit h-12 w-full text-[15px] @lg:w-auto" disabled={submitting}>
                       {submitting ? <Loader2 className="animate-spin" /> : null}
                       Send project request
                       {!submitting && <ArrowRight />}
                     </Button>
-                    <p className="mt-3 text-xs text-muted-foreground">
+                    <p className="cf-note mt-3 text-xs text-muted-foreground">
                       Your answers are only shared with {brandName ?? "the form owner"}.
                     </p>
                   </div>
@@ -282,18 +309,47 @@ export function FormRenderer({
           )}
         </div>
 
-        <footer className="mt-8 flex justify-center">
-          <a
-            href="/"
-            target={isPreview ? "_blank" : undefined}
-            rel="noopener"
-            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <LogoMark className="size-3.5" />
-            Powered by ClientForm
-          </a>
-        </footer>
       </div>
+    </div>
+    {showBadge && <FormBadge floating={isPreview ? "sticky" : "fixed"} />}
+    </>
+  );
+}
+
+/**
+ * The ClientForm badge, floating in the bottom-right corner while the client scrolls.
+ * It sits outside the themed root, so a form's colors and fonts never restyle it.
+ * In the builder preview it sticks to the preview frame instead of the browser window.
+ */
+function FormBadge({ floating }: { floating: "fixed" | "sticky" }) {
+  const badge = (
+    <a
+      href="/"
+      target="_blank"
+      rel="noopener"
+      className="cf-badge pointer-events-auto inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/95 py-1.5 pr-3.5 pl-2 font-sans text-neutral-950 shadow-lg shadow-black/[0.08] backdrop-blur-sm transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:outline-none"
+    >
+      <LogoMark className="size-6" />
+      <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+        <span className="text-xs text-neutral-500">Powered by</span>
+        <span className="text-[15px] font-semibold tracking-tight">ClientForm</span>
+      </span>
+    </a>
+  );
+
+  if (floating === "fixed") {
+    return (
+      <div className="pointer-events-none fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 sm:right-5 sm:bottom-5">
+        {badge}
+      </div>
+    );
+  }
+
+  // Zero-height sticky row at the end of the scroll area, pinned to the frame's bottom edge;
+  // items-end lets the badge rise above it instead of being squashed to zero height.
+  return (
+    <div className="pointer-events-none sticky bottom-0 z-10 flex h-0 items-end justify-end">
+      <div className="pr-4 pb-4">{badge}</div>
     </div>
   );
 }
@@ -303,7 +359,7 @@ function BrandHeader({ branding }: { branding: Branding }) {
   if (!branding.name && !branding.avatar_url) return null;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="cf-brand flex items-center gap-3">
       <Avatar className="size-16 border">
         {branding.avatar_url && <AvatarImage src={branding.avatar_url} alt="" />}
         <AvatarFallback className="bg-foreground text-sm font-semibold text-background">
@@ -311,7 +367,7 @@ function BrandHeader({ branding }: { branding: Branding }) {
         </AvatarFallback>
       </Avatar>
       <div className="min-w-0">
-        {branding.name && <p className="truncate text-xl font-semibold">{branding.name}</p>}
+        {branding.name && <p className="cf-brand-name truncate text-xl font-semibold">{branding.name}</p>}
         {site && branding.website_url && (
           <a
             href={branding.website_url}
@@ -341,8 +397,8 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-2.5">
-      <label htmlFor={`cf-${id}`} className="block text-sm font-medium">
+    <div className="cf-field space-y-2.5">
+      <label htmlFor={`cf-${id}`} className="cf-label block text-sm font-medium">
         {label}
         {required ? (
           <span className="ml-0.5 text-muted-foreground" aria-hidden>
@@ -354,7 +410,7 @@ function Field({
       </label>
       {children}
       {error && (
-        <p className="text-xs font-medium text-destructive animate-in fade-in-0 slide-in-from-top-0.5">{error}</p>
+        <p className="cf-error text-xs font-medium text-destructive animate-in fade-in-0 slide-in-from-top-0.5">{error}</p>
       )}
     </div>
   );
@@ -380,12 +436,12 @@ function QuestionInput({
 
   switch (question.type) {
     case "long_text":
-      return <Textarea {...common} rows={5} value={value} onChange={(e) => onChange(e.target.value)} className="min-h-32" />;
+      return <Textarea {...common} rows={5} value={value} onChange={(e) => onChange(e.target.value)} className="cf-input min-h-32" />;
     case "email":
-      return <Input {...common} type="email" value={value} onChange={(e) => onChange(e.target.value)} className="h-11" />;
+      return <Input {...common} type="email" value={value} onChange={(e) => onChange(e.target.value)} className="cf-input h-11" />;
     case "url":
       return (
-        <Input {...common} type="url" inputMode="url" value={value} onChange={(e) => onChange(e.target.value)} className="h-11" />
+        <Input {...common} type="url" inputMode="url" value={value} onChange={(e) => onChange(e.target.value)} className="cf-input h-11" />
       );
     case "multiple_choice":
     case "budget":
@@ -394,7 +450,7 @@ function QuestionInput({
       return <FileInput id={id} hint={question.placeholder} file={file} onFile={onFile} />;
     case "short_text":
     default:
-      return <Input {...common} value={value} onChange={(e) => onChange(e.target.value)} className="h-11" />;
+      return <Input {...common} value={value} onChange={(e) => onChange(e.target.value)} className="cf-input h-11" />;
   }
 }
 
@@ -416,7 +472,7 @@ function ChoiceGroup({
   }
 
   return (
-    <div id={id} role="radiogroup" tabIndex={-1} className="grid gap-2 outline-none @md:grid-cols-2">
+    <div id={id} role="radiogroup" tabIndex={-1} className="cf-choices grid gap-2 outline-none @md:grid-cols-2">
       {options.map((option, index) => {
         const selected = value === option;
         return (
@@ -425,21 +481,22 @@ function ChoiceGroup({
             type="button"
             role="radio"
             aria-checked={selected}
+            data-selected={selected ? "" : undefined}
             onClick={() => onChange(selected && !required ? "" : option)}
             className={cn(
-              "flex min-h-11 items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30",
+              "cf-choice flex min-h-11 items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30",
               selected
-                ? "border-foreground bg-foreground text-background shadow-sm"
+                ? "border-primary bg-primary text-primary-foreground shadow-sm"
                 : "bg-background hover:border-foreground/25 hover:bg-muted/40",
             )}
           >
             <span
               className={cn(
                 "flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors",
-                selected ? "border-background" : "border-foreground/25",
+                selected ? "border-primary-foreground" : "border-foreground/25",
               )}
             >
-              {selected && <span className="size-1.5 rounded-full bg-background" />}
+              {selected && <span className="size-1.5 rounded-full bg-primary-foreground" />}
             </span>
             <span className="min-w-0 break-words">{option}</span>
           </button>
@@ -462,7 +519,7 @@ function FileInput({
 }) {
   if (file) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border px-4 py-3">
+      <div className="cf-upload flex items-center gap-3 rounded-xl border px-4 py-3">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
           <FileText className="size-4 text-muted-foreground" />
         </div>
@@ -498,7 +555,7 @@ function FileInput({
   return (
     <label
       htmlFor={id}
-      className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-8 text-center transition-colors hover:border-foreground/25 hover:bg-muted/40 focus-within:ring-[3px] focus-within:ring-ring/30"
+      className="cf-upload flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-8 text-center transition-colors hover:border-foreground/25 hover:bg-muted/40 focus-within:ring-[3px] focus-within:ring-ring/30"
     >
       <div className="flex size-9 items-center justify-center rounded-lg border bg-background shadow-xs">
         <Upload className="size-4 text-muted-foreground" />
@@ -522,8 +579,8 @@ function SuccessState({ name, email, brandName }: { name: string; email: string;
   const firstName = name.trim().split(/\s+/)[0];
   return (
     // Centred vertically in the card, which stretches to fill the screen.
-    <div className="flex flex-1 flex-col justify-center py-10 animate-in fade-in-0 slide-in-from-bottom-2 duration-500">
-      <div className="flex size-12 items-center justify-center rounded-full bg-foreground text-background">
+    <div className="cf-success flex flex-1 flex-col justify-center py-10 animate-in fade-in-0 slide-in-from-bottom-2 duration-500">
+      <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Check className="size-5" />
       </div>
       <h1 className="mt-6 text-3xl font-semibold tracking-tight wrap-anywhere @2xl:text-4xl">

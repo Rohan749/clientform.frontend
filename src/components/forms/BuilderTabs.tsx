@@ -1,10 +1,11 @@
-import { Eye, PenLine } from "lucide-react";
+import { Eye, Palette, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type BuilderTab = "edit" | "preview";
+export type BuilderTab = "edit" | "design" | "preview";
 
 const TABS: Array<{ value: BuilderTab; label: string; icon: typeof Eye }> = [
   { value: "edit", label: "Edit", icon: PenLine },
+  { value: "design", label: "Design", icon: Palette },
   { value: "preview", label: "Preview", icon: Eye },
 ];
 

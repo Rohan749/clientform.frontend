@@ -17,6 +17,7 @@ const FormsPage = lazy(() => import("@/pages/FormsPage"));
 const SubmissionsPage = lazy(() => import("@/pages/SubmissionsPage"));
 const SubmissionDetailPage = lazy(() => import("@/pages/SubmissionDetailPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const BillingPage = lazy(() => import("@/pages/BillingPage"));
 const PublicFormPage = lazy(() => import("@/pages/PublicFormPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
           { path: "/submissions", element: <SubmissionsPage /> },
           { path: "/submissions/:id", element: <SubmissionDetailPage /> },
           { path: "/settings", element: <SettingsPage /> },
+          { path: "/billing", element: <BillingPage /> },
         ],
       },
 

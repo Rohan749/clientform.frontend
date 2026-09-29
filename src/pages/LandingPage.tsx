@@ -1,15 +1,21 @@
 import {
   ArrowRight,
-  Check,
+  BadgeCheck,
+  Blend,
+  Code2,
+  Crown,
   Eye,
   Link2,
   MessageCircle,
   MessageSquareQuote,
+  Palette,
   Sparkles,
+  Type,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Link } from "react-router";
-import { Logo } from "@/components/common/Logo";
+import { FreePlanCard, IntervalToggle, ProPlanCard } from "@/components/billing/PlanCards";
+import { Logo, LogoMark } from "@/components/common/Logo";
 import { BrowserFrame } from "@/components/forms/BrowserFrame";
 import { ProviderIcon } from "@/components/forms/TestimonialCard";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
@@ -19,8 +25,11 @@ import { Reveal, useInView } from "@/components/marketing/Reveal";
 import { SampleTestimonialCard } from "@/components/marketing/SampleTestimonialCard";
 import { SAMPLE_TESTIMONIALS } from "@/components/marketing/samples";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
+import { useGoogleFonts } from "@/hooks/useGoogleFonts";
+import { fontById, googleFontsHref, THEME_PRESETS, themeStyle } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import type { TestimonialProvider } from "@/types";
+import type { BillingInterval, TestimonialProvider } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Copy
@@ -58,12 +67,6 @@ const AUDIENCE = [
   "Agencies",
 ];
 
-const INCLUDED = [
-  "As many forms as you want",
-  "Reviews from X, Senja and Testimonial.to",
-  "Clients can send files up to 10 MB",
-  "Your own link to share",
-];
 
 // ---------------------------------------------------------------------------
 // Small building blocks
@@ -425,36 +428,152 @@ function Sources() {
   );
 }
 
-function Pricing() {
+/** The Pro look-switcher: the same form, four ways. "Free" keeps the ClientForm badge. */
+const SHOWCASE_LOOKS = [
+  { name: "Free", preset: null },
+  ...THEME_PRESETS.filter((preset) => preset.name !== "Classic").slice(0, 3).map((preset) => ({ name: preset.name, preset })),
+];
+
+function ProSection() {
+  const [active, setActive] = useState(1);
+  const [ref, inView] = useInView<HTMLDivElement>();
+  const look = SHOWCASE_LOOKS[active] ?? SHOWCASE_LOOKS[0];
+  const themed = look.preset ? themeStyle({ ...look.preset.theme, white_label: true, custom_css: "" }) : null;
+
+  // Only fetch the showcase fonts once the section is on screen.
+  useGoogleFonts(
+    inView ? googleFontsHref(SHOWCASE_LOOKS.flatMap((item) => (item.preset ? [fontById(item.preset.theme.font)] : []))) : null,
+  );
+
+  const points = [
+    { icon: BadgeCheck, text: "No ClientForm badge. Only your brand shows." },
+    { icon: Type, text: "Pick a font that fits your style." },
+    { icon: Palette, text: "Choose your own text and button colors." },
+    { icon: Blend, text: "Use any background color, or a gradient." },
+    { icon: Code2, text: "Know CSS? Change anything you like." },
+  ];
+
   return (
-    <section id="pricing" className="scroll-mt-20 border-b bg-neutral-50/60">
-      <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
-        <Reveal className="mx-auto max-w-md text-center">
-          <Eyebrow>Pricing</Eyebrow>
-          <SectionTitle>Free for early users.</SectionTitle>
-          <p className="mt-3 text-muted-foreground">You get every feature for free while we build ClientForm.</p>
+    <section id="pro" className="scroll-mt-20 border-b bg-neutral-50/60">
+      <div className="mx-auto grid max-w-6xl gap-14 px-5 py-24 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center">
+        <Reveal>
+          <Eyebrow>
+            <span className="inline-flex items-center gap-1.5">
+              <Crown className="size-3.5" /> ClientForm Pro
+            </span>
+          </Eyebrow>
+          <SectionTitle>Make the form look like you.</SectionTitle>
+          <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground">
+            Your form is often the first thing a new client fills out. With Pro, it can match your brand. Your reviews
+            still sit right next to it.
+          </p>
+          <ul className="mt-8 space-y-4">
+            {points.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background">
+                  <Icon className="size-4" />
+                </div>
+                <p className="pt-1.5 text-sm">{text}</p>
+              </li>
+            ))}
+          </ul>
+          <Button asChild variant="outline" className="mt-9">
+            <a href="#pricing">
+              See Pro pricing <ArrowRight />
+            </a>
+          </Button>
         </Reveal>
-        <Reveal delay={100} className="mx-auto mt-10 max-w-md">
-          <div className="rounded-2xl border bg-background p-7 shadow-sm">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-4xl font-semibold tracking-tight">$0</span>
-              <span className="text-sm text-muted-foreground">/ month</span>
-            </div>
-            <ul className="mt-6 space-y-3">
-              {INCLUDED.map((item) => (
-                <li key={item} className="flex items-center gap-3 text-sm">
-                  <span className="flex size-5 items-center justify-center rounded-full bg-foreground text-background">
-                    <Check className="size-3" />
-                  </span>
-                  {item}
-                </li>
+
+        <Reveal delay={120}>
+          <div ref={ref}>
+            <div className="mb-4 flex flex-wrap justify-center gap-1.5" role="radiogroup" aria-label="Example looks">
+              {SHOWCASE_LOOKS.map((item, index) => (
+                <button
+                  key={item.name}
+                  type="button"
+                  role="radio"
+                  aria-checked={index === active}
+                  onClick={() => setActive(index)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                    index === active
+                      ? "border-foreground bg-foreground text-background"
+                      : "bg-background text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {item.name}
+                  {item.preset && <span className={cn("ml-1", index === active ? "opacity-70" : "text-violet-600")}>Pro</span>}
+                </button>
               ))}
-            </ul>
-            <Button asChild className="mt-8 h-11 w-full">
-              <Link to="/signup">Get started</Link>
-            </Button>
+            </div>
+
+            <BrowserFrame url="clientform.com/f/juno-studio" className="shadow-xl shadow-black/[0.06]">
+              <div
+                className="cf-root relative bg-neutral-50 p-3 transition-[background] duration-500 sm:p-5"
+                style={themed?.style}
+                data-cf-colors={themed?.customColors ? "" : undefined}
+              >
+                <MiniForm compact className="shadow-xs transition-colors duration-500" />
+                <div className="mt-3 flex h-7 justify-end">
+                  {!look.preset && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-2.5 py-1 font-sans text-neutral-950 shadow-sm animate-in fade-in-0">
+                      <LogoMark className="size-4" />
+                      <span className="text-[10px] text-neutral-500">Powered by</span>
+                      <span className="text-xs font-semibold">ClientForm</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </BrowserFrame>
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              {look.preset ? "A Pro look. No ClientForm badge." : "The Free look, with the ClientForm badge."} Example form.
+            </p>
           </div>
         </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function Pricing() {
+  const { user } = useAuth();
+  const [interval, setBillingInterval] = useState<BillingInterval>("year");
+  const upgradePath = `/billing?interval=${interval}`;
+  const proHref = user ? upgradePath : `/signup?next=${encodeURIComponent(upgradePath)}`;
+
+  return (
+    <section id="pricing" className="scroll-mt-20 border-b">
+      <div className="mx-auto max-w-6xl px-5 py-24 sm:px-8">
+        <Reveal className="mx-auto max-w-xl text-center">
+          <Eyebrow>Pricing</Eyebrow>
+          <SectionTitle>Start free. Go Pro when you want more.</SectionTitle>
+          <p className="mt-3 text-muted-foreground">
+            Free has everything you need to show your reviews. Pro makes the form look like your brand.
+          </p>
+          <IntervalToggle value={interval} onChange={setBillingInterval} className="mt-8" />
+        </Reveal>
+        <Reveal delay={100} className="mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-2">
+          <FreePlanCard
+            action={
+              <Button asChild variant="outline" className="h-11 w-full">
+                <Link to={user ? "/dashboard" : "/signup"}>{user ? "Go to dashboard" : "Get started for free"}</Link>
+              </Button>
+            }
+          />
+          <ProPlanCard
+            interval={interval}
+            action={
+              <Button asChild className="h-11 w-full">
+                <Link to={proHref}>
+                  Go Pro <ArrowRight />
+                </Link>
+              </Button>
+            }
+          />
+        </Reveal>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Both plans show your reviews the same way. Pro only changes how the form looks. Cancel any time.
+        </p>
       </div>
     </section>
   );
@@ -498,6 +617,7 @@ export default function LandingPage() {
         <BeforeAfter />
         <HowItWorks />
         <Sources />
+        <ProSection />
         <Pricing />
         <FinalCta />
       </main>

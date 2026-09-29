@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { queryCache, queryKeys } from "@/lib/queryCache";
 import { starterQuestions } from "@/lib/questions";
+import { DEFAULT_THEME, normalizeTheme } from "@/lib/theme";
 import type { FormDraft, FormRecord, FormWithContent } from "@/types";
 
 export function toDraft(form: FormWithContent): FormDraft {
@@ -11,6 +12,7 @@ export function toDraft(form: FormWithContent): FormDraft {
     description: form.description,
     testimonials_heading: form.testimonials_heading,
     testimonials_description: form.testimonials_description,
+    theme: normalizeTheme(form.theme),
     questions: form.questions.map(({ id, label, type, placeholder, required, options }) => ({
       id,
       label,
@@ -41,6 +43,7 @@ export function newDraft(): FormDraft {
     description: "Tell me about your project and I'll get back to you within two business days.",
     testimonials_heading: "What clients say",
     testimonials_description: "A few words from people I've worked with.",
+    theme: DEFAULT_THEME,
     questions: starterQuestions(),
     testimonials: [],
   };

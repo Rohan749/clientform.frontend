@@ -72,6 +72,8 @@ export default function PublicFormPage() {
         testimonialsHeading={form.testimonials_heading}
         testimonialsDescription={form.testimonials_description}
         branding={form.branding}
+        theme={form.theme}
+        showBadge={form.show_badge}
         onSubmit={handleSubmit}
         onUpload={handleUpload}
       />

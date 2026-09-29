@@ -68,7 +68,7 @@ export function TestimonialWall({
   return (
     <div
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-2xl border border-violet-100 bg-linear-to-br from-violet-50 via-fuchsia-50/60 to-pink-50",
+        "cf-testimonials relative flex flex-col overflow-hidden rounded-2xl border border-violet-100 bg-linear-to-br from-violet-50 via-fuchsia-50/60 to-pink-50",
         className,
       )}
     >
@@ -76,7 +76,7 @@ export function TestimonialWall({
         <div className="shrink-0 px-5 pt-6 pb-2">
           {heading.trim() && (
             <h2 className="flex items-center gap-2.5 text-xl font-semibold tracking-tight @2xl:text-2xl">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-violet-600 to-pink-500 text-white shadow-sm">
+              <span className="cf-testimonials-icon flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-violet-600 to-pink-500 text-white shadow-sm">
                 <Quote className="size-4 fill-current" />
               </span>
               <span className="min-w-0 wrap-anywhere">{heading.trim()}</span>

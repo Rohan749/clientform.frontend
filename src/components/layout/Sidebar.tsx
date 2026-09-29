@@ -1,5 +1,5 @@
-import { FileText, Inbox, LayoutGrid, LogOut, type LucideIcon, Plus, Settings } from "lucide-react";
-import { NavLink, useNavigate } from "react-router";
+import { CreditCard, Crown, FileText, Inbox, LayoutGrid, LogOut, type LucideIcon, Plus, Settings } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router";
 import { Logo } from "@/components/common/Logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
+import { usePlan } from "@/hooks/usePlan";
 import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +75,9 @@ function UserMenu() {
         <DropdownMenuItem onSelect={() => navigate("/settings")}>
           <Settings /> Settings
         </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/billing")}>
+          <CreditCard /> Billing
+        </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={async () => {
             await signOut();
@@ -84,6 +88,24 @@ function UserMenu() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/** A quiet nudge for Free users. Hidden while the plan loads, and for Pro users. */
+function UpgradeNudge({ onNavigate }: { onNavigate?: () => void }) {
+  const { billing, isPro } = usePlan();
+  if (!billing || isPro || !billing.configured) return null;
+  return (
+    <Link
+      to="/billing"
+      onClick={onNavigate}
+      className="mb-1 block rounded-xl border border-violet-100 bg-linear-to-br from-violet-50 via-background to-pink-50 p-3 transition-colors hover:border-violet-200"
+    >
+      <span className="flex items-center gap-1.5 text-[13px] font-semibold">
+        <Crown className="size-3.5" /> Go Pro
+      </span>
+      <span className="mt-0.5 block text-xs text-muted-foreground">Your fonts, colors and no badge.</span>
+    </Link>
   );
 }
 
@@ -101,9 +123,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="flex flex-col gap-2 px-3 pb-3">
+      <div className="flex flex-col gap-1 px-3 pb-3">
+        <UpgradeNudge onNavigate={onNavigate} />
+        <SidebarLink item={{ to: "/billing", label: "Billing", icon: CreditCard }} onNavigate={onNavigate} />
         <SidebarLink item={{ to: "/settings", label: "Settings", icon: Settings }} onNavigate={onNavigate} />
-        <div className="border-t pt-2">
+        <div className="mt-1 border-t pt-2">
           <UserMenu />
         </div>
       </div>

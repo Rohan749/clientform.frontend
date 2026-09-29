@@ -1,6 +1,8 @@
 import { API_URL } from "./config";
 import { type AuthUser, getAccessToken, type Session, setSession } from "./session";
 import type {
+  BillingInterval,
+  BillingState,
   DashboardData,
   FormDraft,
   FormSummary,
@@ -143,6 +145,18 @@ export const api = {
     publish: (id: string, slug?: string) =>
       request<FormWithContent>(`/forms/${id}/publish`, { method: "POST", body: slug ? { slug } : {} }),
     unpublish: (id: string) => request<FormWithContent>(`/forms/${id}/unpublish`, { method: "POST" }),
+  },
+
+  billing: {
+    get: () => request<BillingState>("/billing"),
+    sync: () => request<BillingState>("/billing/sync", { method: "POST" }),
+    checkout: (interval: BillingInterval) =>
+      request<{ checkout_url: string }>("/billing/checkout", { method: "POST", body: { interval } }),
+    cancel: () => request<BillingState>("/billing/cancel", { method: "POST" }),
+    resume: () => request<BillingState>("/billing/resume", { method: "POST" }),
+    changeInterval: (interval: BillingInterval) =>
+      request<BillingState>("/billing/change-interval", { method: "POST", body: { interval } }),
+    portal: () => request<{ url: string }>("/billing/portal", { method: "POST" }),
   },
 
   testimonials: {

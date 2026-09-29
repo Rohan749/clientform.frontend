@@ -1,6 +1,6 @@
 import { Loader2, MailCheck } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { AuthDivider, GoogleButton } from "@/components/auth/GoogleButton";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, errorMessage } from "@/lib/api";
 import { setSession } from "@/lib/session";
+import { safeNext } from "./LoginPage";
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Where to go after signing up, e.g. /billing when someone picked Pro on the landing page.
+  const next = safeNext(params.get("next"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +38,7 @@ export default function SignupPage() {
         return;
       }
       setSession(result.session);
-      navigate("/dashboard", { replace: true });
+      navigate(next, { replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -77,7 +81,7 @@ export default function SignupPage() {
         </>
       }
     >
-      <GoogleButton next={"/dashboard"} onError={setError} />
+      <GoogleButton next={next} onError={setError} />
       <AuthDivider />
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-2">
