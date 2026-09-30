@@ -106,6 +106,7 @@ function ExampleNote({ className }: { className?: string }) {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
+      
       <div className="pointer-events-none absolute inset-0 bg-dotted [mask-image:radial-gradient(ellipse_at_top,black_10%,transparent_60%)]" />
       <div className="relative mx-auto max-w-6xl px-5 pt-20 pb-14 text-center sm:px-8 sm:pt-28">
         <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-700">

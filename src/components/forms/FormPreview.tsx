@@ -66,7 +66,9 @@ export function FormPreview({
           mode="preview"
           title={draft.title}
           description={draft.description}
-          questions={draft.questions}
+          // Same rules as the live form: pages and conditions only apply with Pro.
+          formType={pro ? draft.form_type : "single"}
+          questions={pro ? draft.questions : draft.questions.map((q) => ({ ...q, show_if: null }))}
           testimonials={draft.testimonials}
           testimonialsHeading={draft.testimonials_heading}
           testimonialsDescription={draft.testimonials_description}

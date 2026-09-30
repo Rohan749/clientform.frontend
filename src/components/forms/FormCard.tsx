@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Check, Copy, ExternalLink, EyeOff, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Check, Code2, Copy, CopyPlus, ExternalLink, EyeOff, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { FormStatusPill } from "@/components/common/StatusPill";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,11 @@ interface FormCardProps {
   onUnpublish: () => void;
   onArchiveToggle: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
+  onEmbed: () => void;
 }
 
-export function FormCard({ form, onUnpublish, onArchiveToggle, onDelete }: FormCardProps) {
+export function FormCard({ form, onUnpublish, onArchiveToggle, onDelete, onDuplicate, onEmbed }: FormCardProps) {
   const { copy, copied } = useCopy();
   const isLive = form.status === "published" && form.slug;
   const url = form.slug ? publicFormUrl(form.slug) : null;
@@ -44,6 +46,13 @@ export function FormCard({ form, onUnpublish, onArchiveToggle, onDelete }: FormC
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onDuplicate}>
+                <CopyPlus /> Duplicate form
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onEmbed} disabled={!isLive}>
+                <Code2 /> Embed on website
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               {form.status === "published" && (
                 <DropdownMenuItem onSelect={onUnpublish}>
                   <EyeOff /> Unpublish

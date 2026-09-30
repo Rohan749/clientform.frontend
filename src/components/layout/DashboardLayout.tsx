@@ -1,15 +1,20 @@
-import { type ReactNode, Suspense } from "react";
+import { type CSSProperties, type ReactNode, Suspense } from "react";
 import { Outlet } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePlan } from "@/hooks/usePlan";
+import { TestModeBanner } from "./ModeSwitch";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 
 export function DashboardLayout() {
+  const { testMode } = usePlan();
   return (
-    <div className="min-h-dvh bg-background">
+    // --test-banner lets full-height pages (the form builder) leave room for the Test Mode strip.
+    <div className="min-h-dvh bg-background" style={{ "--test-banner": testMode ? "2.25rem" : "0px" } as CSSProperties}>
       <Sidebar />
       <Header />
       <main className="lg:pl-60">
+        <TestModeBanner />
         <Suspense fallback={<PageSkeleton />}>
           <Outlet />
         </Suspense>

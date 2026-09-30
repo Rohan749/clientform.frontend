@@ -2,6 +2,7 @@ import { API_URL } from "./config";
 import { type AuthUser, getAccessToken, type Session, setSession } from "./session";
 import type {
   BillingInterval,
+  AdminMode,
   BillingState,
   DashboardData,
   FormDraft,
@@ -142,6 +143,7 @@ export const api = {
     update: (id: string, patch: Partial<FormDraft> & { status?: "draft" | "archived" }) =>
       request<FormWithContent>(`/forms/${id}`, { method: "PATCH", body: patch }),
     remove: (id: string) => request<void>(`/forms/${id}`, { method: "DELETE" }),
+    duplicate: (id: string) => request<FormWithContent>(`/forms/${id}/duplicate`, { method: "POST" }),
     publish: (id: string, slug?: string) =>
       request<FormWithContent>(`/forms/${id}/publish`, { method: "POST", body: slug ? { slug } : {} }),
     unpublish: (id: string) => request<FormWithContent>(`/forms/${id}/unpublish`, { method: "POST" }),
@@ -157,6 +159,11 @@ export const api = {
     changeInterval: (interval: BillingInterval) =>
       request<BillingState>("/billing/change-interval", { method: "POST", body: { interval } }),
     portal: () => request<{ url: string }>("/billing/portal", { method: "POST" }),
+  },
+
+  admin: {
+    setMode: (mode: AdminMode["mode"], test_plan?: AdminMode["test_plan"]) =>
+      request<BillingState>("/admin/mode", { method: "PATCH", body: { mode, test_plan } }),
   },
 
   testimonials: {

@@ -6,6 +6,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { PageHeader } from "@/components/common/PageHeader";
+import { EmbedDialog } from "@/components/forms/EmbedDialog";
 import { FormCard } from "@/components/forms/FormCard";
 import { PageContainer } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,27 @@ export default function FormsPage() {
     staleTime: 60_000,
   });
   const [pendingDelete, setPendingDelete] = useState<FormSummary | null>(null);
+  const [embedding, setEmbedding] = useState<FormSummary | null>(null);
+
+  const duplicate = async (form: FormSummary) => {
+    const pending = toast.loading("Duplicating…");
+    try {
+      const copy = await api.forms.duplicate(form.id);
+      const { questions: _q, testimonials: _t, ...summary } = copy;
+      // The copy goes right after the original (lists are newest first after a refresh).
+      setData((prev) => {
+        if (!prev) return prev;
+        const index = prev.findIndex((f) => f.id === form.id);
+        const next = [...prev];
+        next.splice(index + 1, 0, { ...summary, submission_count: 0 });
+        return next;
+      });
+      queryCache.invalidate(queryKeys.dashboard);
+      toast.success(`Created "${copy.name}"`, { id: pending, description: "It's a draft you can edit on its own." });
+    } catch (err) {
+      toast.error(errorMessage(err), { id: pending });
+    }
+  };
 
   const replace = (updated: Partial<FormSummary> & { id: string }) => {
     setData((prev) => prev?.map((f) => (f.id === updated.id ? { ...f, ...updated } : f)) ?? prev);
@@ -105,11 +127,19 @@ export default function FormsPage() {
                 onUnpublish={() => unpublish(form)}
                 onArchiveToggle={() => toggleArchive(form)}
                 onDelete={() => setPendingDelete(form)}
+                onDuplicate={() => duplicate(form)}
+                onEmbed={() => setEmbedding(form)}
               />
             ))}
           </div>
         )}
       </div>
+
+      <EmbedDialog
+        open={Boolean(embedding)}
+        onOpenChange={(open) => !open && setEmbedding(null)}
+        slug={embedding?.status === "published" ? embedding.slug : null}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

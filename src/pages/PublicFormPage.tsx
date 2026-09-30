@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { LogoMark } from "@/components/common/Logo";
 import { FormRenderer, type SubmissionValues } from "@/components/forms/FormRenderer";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,25 @@ import { api } from "@/lib/api";
 export default function PublicFormPage() {
   const { slug = "" } = useParams<{ slug: string }>();
   const { data: form, loading, error } = useApi(() => api.public.getForm(slug), [slug]);
+  // ?embed=1: shown inside another website through embed.js (or a plain iframe).
+  const [params] = useSearchParams();
+  const embedded = params.get("embed") === "1";
+
+  // Tell the host page how tall the form is, so its iframe grows and shrinks with it.
+  useEffect(() => {
+    if (!embedded || window.parent === window) return;
+    const root = document.getElementById("root");
+    if (!root) return;
+    const post = () => window.parent.postMessage({ type: "clientform:resize", slug, height: root.offsetHeight }, "*");
+    const observer = new ResizeObserver(post);
+    observer.observe(root);
+    post();
+    return () => observer.disconnect();
+  }, [embedded, slug]);
+
+  const handlePageChange = useCallback(() => {
+    if (embedded && window.parent !== window) window.parent.postMessage({ type: "clientform:scroll", slug }, "*");
+  }, [embedded, slug]);
 
   useEffect(() => {
     if (!form) return;
@@ -62,9 +81,12 @@ export default function PublicFormPage() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <div className={embedded ? undefined : "min-h-dvh"}>
       <FormRenderer
         mode="live"
+        embedded={embedded}
+        formType={form.form_type}
+        onPageChange={handlePageChange}
         title={form.title}
         description={form.description}
         questions={form.questions}
@@ -73,7 +95,7 @@ export default function PublicFormPage() {
         testimonialsDescription={form.testimonials_description}
         branding={form.branding}
         theme={form.theme}
-        showBadge={form.show_badge}
+        showBadge={embedded ? form.show_embed_badge : form.show_badge}
         onSubmit={handleSubmit}
         onUpload={handleUpload}
       />

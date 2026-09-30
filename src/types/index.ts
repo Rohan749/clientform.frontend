@@ -15,6 +15,14 @@ export type SubmissionStatus = "new" | "reviewed" | "archived";
 /** Add new providers here and in lib/testimonials.ts (and the backend provider registry). */
 export type TestimonialProvider = "x" | "senja" | "testimonial_to";
 
+export type FormType = "single" | "multi";
+
+/** Pro conditional logic: show this question only when an earlier choice question has this answer. */
+export interface ShowIf {
+  question_id: string;
+  value: string;
+}
+
 export interface Question {
   id: string;
   label: string;
@@ -22,6 +30,11 @@ export interface Question {
   placeholder: string;
   required: boolean;
   options: string[];
+  /** Optional sub-label shown under the question. */
+  help_text: string;
+  /** Page index in multi-page forms (0 = first page). */
+  page: number;
+  show_if: ShowIf | null;
 }
 
 export interface Testimonial {
@@ -85,6 +98,15 @@ export interface BillingState {
     past_due_ends_at: string | null;
   } | null;
   has_billing_account: boolean;
+  /** What the app acts as: the real plan, or the admin's test plan in Test Mode. */
+  effective_plan: "free" | "pro";
+  /** Only present for the admin account. */
+  admin: AdminMode | null;
+}
+
+export interface AdminMode {
+  mode: "live" | "test";
+  test_plan: "free" | "pro";
 }
 
 export interface Branding {
@@ -102,6 +124,7 @@ export interface FormRecord {
   testimonials_heading: string;
   testimonials_description: string;
   theme: FormTheme;
+  form_type: FormType;
   status: FormStatus;
   created_at: string;
   updated_at: string;
@@ -124,6 +147,7 @@ export interface FormDraft {
   testimonials_heading: string;
   testimonials_description: string;
   theme: FormTheme;
+  form_type: FormType;
   questions: Question[];
   testimonials: Testimonial[];
 }
@@ -140,6 +164,8 @@ export interface PublicForm {
   /** The owner's custom design, only while they're on Pro. */
   theme: FormTheme | null;
   show_badge: boolean;
+  show_embed_badge: boolean;
+  form_type: FormType;
 }
 
 export interface SubmissionListItem {

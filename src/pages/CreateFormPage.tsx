@@ -5,8 +5,16 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ErrorState } from "@/components/common/ErrorState";
 import { BuilderHeader } from "@/components/forms/BuilderHeader";
+import {
+  type BuilderStep,
+  FormTypeStep,
+  PublishButton,
+  PublishChecklist,
+  StepFooter,
+  StepIntro,
+} from "@/components/forms/BuilderSteps";
 import { DesignPanel } from "@/components/forms/DesignPanel";
-import type { BuilderTab } from "@/components/forms/BuilderTabs";
+import { EmbedDialog } from "@/components/forms/EmbedDialog";
 import { FormBuilder } from "@/components/forms/FormBuilder";
 import { FormPreview } from "@/components/forms/FormPreview";
 import { PublishedDialog } from "@/components/forms/PublishedDialog";
@@ -35,13 +43,28 @@ function FormEditor() {
   const navigate = useNavigate();
   const { branding } = useProfile();
   const [searchParams, setSearchParams] = useSearchParams();
-  const view = searchParams.get("view");
-  const tab: BuilderTab = view === "preview" || view === "design" ? view : "edit";
   const { isPro, loading: planLoading } = usePlan();
-  const setTab = (next: BuilderTab) => {
-    setSearchParams(next === "edit" ? {} : { view: next }, { replace: true });
+  // ?step=… keeps the current stage across refreshes. New forms start at "Form type";
+  // existing forms open straight on their questions. (?view= is the old tab parameter.)
+  const requested = searchParams.get("step") ?? { preview: "preview", design: "design" }[searchParams.get("view") ?? ""] ?? null;
+  const step: BuilderStep =
+    requested === "type" || requested === "questions" || requested === "design" || requested === "preview"
+      ? requested
+      : id
+        ? "questions"
+        : "type";
+  const setStep = (next: BuilderStep) => {
+    setSearchParams({ step: next }, { replace: true });
     window.scrollTo({ top: 0 });
   };
+  const [embedOpen, setEmbedOpen] = useState(false);
+
+  const requirePro = useCallback(() => {
+    toast("That's a Pro feature", {
+      description: "Multi-page forms and conditional questions come with ClientForm Pro.",
+      action: { label: "See Pro", onClick: () => navigate("/billing") },
+    });
+  }, [navigate]);
 
   // Router state (set right after a form is first created) is read once, then cleared
   // so a page refresh always loads fresh data from the server.
@@ -147,52 +170,115 @@ function FormEditor() {
   if (builder.loading) return <BuilderSkeleton />;
 
   return (
-    <div className="flex flex-col lg:h-dvh">
+    <div className="flex min-h-[calc(100dvh-var(--test-banner,0px))] flex-col lg:h-[calc(100dvh-var(--test-banner,0px))]">
       <BuilderHeader
-        tab={tab}
-        onTabChange={setTab}
+        step={step}
+        onStepChange={setStep}
         name={builder.draft.name}
-        onNameChange={(name) => builder.update({ name })}
         meta={builder.meta}
         dirty={dirty || builder.isNew}
         saving={builder.saving}
         publishing={builder.publishing}
         onSave={handleSave}
-        onPublish={handlePublish}
         onUnpublish={handleUnpublish}
+        onEmbed={() => setEmbedOpen(true)}
       />
 
-      {tab === "edit" ? (
-        <div className="flex-1 lg:min-h-0 lg:overflow-y-auto">
-          <FormBuilder
-            draft={builder.draft}
-            meta={builder.meta}
-            branding={branding}
-            onChange={builder.update}
-            onChangeSlug={handleChangeSlug}
-          />
-        </div>
-      ) : tab === "design" ? (
-        <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-          <div className="border-b lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0">
-            <DesignPanel
-              theme={builder.draft.theme}
-              onChange={(theme) => builder.update({ theme })}
+      {/* Each stage fades in; only one set of options is on screen at a time. */}
+      <div key={step} className="flex flex-1 flex-col animate-in fade-in-0 duration-300 lg:min-h-0">
+        {step === "type" && (
+          <div className="flex-1 lg:min-h-0 lg:overflow-y-auto">
+            <FormTypeStep draft={builder.draft} pro={isPro} onChange={builder.update} onRequirePro={requirePro} />
+          </div>
+        )}
+
+        {step === "questions" && (
+          <div className="flex-1 lg:min-h-0 lg:overflow-y-auto">
+            <StepIntro step="questions" className="mx-auto w-full max-w-2xl px-5 pt-8 sm:px-8 lg:pt-10" />
+            <FormBuilder
+              draft={builder.draft}
+              meta={builder.meta}
+              branding={branding}
+              onChange={builder.update}
+              onChangeSlug={handleChangeSlug}
               pro={isPro}
-              planLoading={planLoading}
+              onRequirePro={requirePro}
             />
           </div>
-          <div className="flex flex-col bg-neutral-50/70 lg:min-h-0">
-            <FormPreview draft={builder.draft} branding={branding} slug={builder.meta?.slug ?? null} pro={isPro} />
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-1 flex-col bg-neutral-50/70 lg:min-h-0">
-          <FormPreview draft={builder.draft} branding={branding} slug={builder.meta?.slug ?? null} pro={isPro} />
-        </div>
-      )}
+        )}
 
-      <PublishedDialog open={publishedOpen} onOpenChange={setPublishedOpen} slug={builder.meta?.slug ?? null} />
+        {step === "design" && (
+          <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+            <div className="border-b lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0">
+              <StepIntro step="design" className="mx-auto w-full max-w-md px-5 pt-6 sm:px-6" />
+              <DesignPanel
+                theme={builder.draft.theme}
+                onChange={(theme) => builder.update({ theme })}
+                pro={isPro}
+                planLoading={planLoading}
+              />
+            </div>
+            <div className="flex flex-col bg-neutral-50/70 lg:min-h-0">
+              <FormPreview draft={builder.draft} branding={branding} slug={builder.meta?.slug ?? null} pro={isPro} />
+            </div>
+          </div>
+        )}
+
+        {step === "preview" && (
+          <div className="flex flex-1 flex-col bg-neutral-50/70 lg:min-h-0 lg:overflow-y-auto">
+            <div className="mx-auto w-full max-w-6xl px-3 pt-6 sm:px-6">
+              <StepIntro step="preview">
+                <div className="mt-4">
+                  <PublishChecklist
+                    draft={builder.draft}
+                    meta={builder.meta}
+                    pro={isPro}
+                    onChangeSlug={handleChangeSlug}
+                    onEmbed={() => setEmbedOpen(true)}
+                  />
+                </div>
+              </StepIntro>
+            </div>
+            <FormPreview
+              draft={builder.draft}
+              branding={branding}
+              slug={builder.meta?.slug ?? null}
+              pro={isPro}
+              className="lg:min-h-[640px]"
+            />
+          </div>
+        )}
+      </div>
+
+      <StepFooter
+        step={step}
+        onStep={setStep}
+        primary={
+          <PublishButton
+            meta={builder.meta}
+            dirty={dirty}
+            busy={builder.saving || builder.publishing}
+            publishing={builder.publishing}
+            onPublish={handlePublish}
+            onSave={handleSave}
+          />
+        }
+      />
+
+      <PublishedDialog
+        open={publishedOpen}
+        onOpenChange={setPublishedOpen}
+        slug={builder.meta?.slug ?? null}
+        onEmbed={() => {
+          setPublishedOpen(false);
+          setEmbedOpen(true);
+        }}
+      />
+      <EmbedDialog
+        open={embedOpen}
+        onOpenChange={setEmbedOpen}
+        slug={builder.meta?.status === "published" ? builder.meta.slug : null}
+      />
 
       <ConfirmDialog
         open={blocker.state === "blocked"}
@@ -211,7 +297,7 @@ function FormEditor() {
 
 function BuilderSkeleton() {
   return (
-    <div className="flex flex-col lg:h-dvh">
+    <div className="flex flex-col lg:h-[calc(100dvh-var(--test-banner,0px))]">
       <div className="flex h-16 items-center gap-3 border-b px-6">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="mx-auto hidden h-8 w-40 lg:block" />

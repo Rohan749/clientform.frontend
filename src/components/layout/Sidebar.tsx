@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/context/ProfileContext";
 import { usePlan } from "@/hooks/usePlan";
+import { ModeSwitch } from "./ModeSwitch";
 import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +126,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="flex flex-col gap-1 px-3 pb-3">
         <UpgradeNudge onNavigate={onNavigate} />
+        <ModeSwitch />
         <SidebarLink item={{ to: "/billing", label: "Billing", icon: CreditCard }} onNavigate={onNavigate} />
         <SidebarLink item={{ to: "/settings", label: "Settings", icon: Settings }} onNavigate={onNavigate} />
         <div className="mt-1 border-t pt-2">

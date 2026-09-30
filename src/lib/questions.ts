@@ -91,16 +91,37 @@ export function createQuestion(type: QuestionType, overrides: Partial<Question> 
     placeholder: defaults.placeholder,
     options: [...defaults.options],
     required: false,
+    help_text: "",
+    page: 0,
+    show_if: null,
     ...overrides,
   };
 }
 
-/** Starter questions for a brand new form — a sensible creative brief. */
-export function starterQuestions(): Question[] {
-  return [
-    createQuestion("long_text", { required: true }),
-    createQuestion("multiple_choice"),
-    createQuestion("budget", { required: true }),
-    createQuestion("short_text", { label: "When do you need this by?", placeholder: "e.g. End of March" }),
-  ];
+/** Choice questions can drive conditions: their answers are known in advance. */
+export const isChoiceQuestion = (question: Pick<Question, "type">) =>
+  question.type === "multiple_choice" || question.type === "budget";
+
+/**
+ * Which questions are showing, given the answers so far. A question with a rule shows only when
+ * the rule's question is itself showing and has that answer; rules pointing at a question that no
+ * longer exists are ignored.
+ */
+export function visibleQuestions<T extends Pick<Question, "id" | "show_if">>(
+  questions: T[],
+  answers: Record<string, string>,
+): T[] {
+  const visible = new Set<string>();
+  const ids = new Set(questions.map((q) => q.id));
+  for (const q of questions) {
+    const rule = q.show_if;
+    if (!rule || !ids.has(rule.question_id) || (visible.has(rule.question_id) && (answers[rule.question_id] ?? "").trim() === rule.value)) {
+      visible.add(q.id);
+    }
+  }
+  return questions.filter((q) => visible.has(q.id));
 }
+
+/** Number of pages in use (at least 1). */
+export const pageCount = (questions: Pick<Question, "page">[]) =>
+  Math.max(1, ...questions.map((q) => q.page + 1));

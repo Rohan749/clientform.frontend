@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { queryCache, queryKeys } from "@/lib/queryCache";
-import { starterQuestions } from "@/lib/questions";
 import { DEFAULT_THEME, normalizeTheme } from "@/lib/theme";
 import type { FormDraft, FormRecord, FormWithContent } from "@/types";
 
@@ -13,13 +12,17 @@ export function toDraft(form: FormWithContent): FormDraft {
     testimonials_heading: form.testimonials_heading,
     testimonials_description: form.testimonials_description,
     theme: normalizeTheme(form.theme),
-    questions: form.questions.map(({ id, label, type, placeholder, required, options }) => ({
+    form_type: form.form_type ?? "single",
+    questions: form.questions.map(({ id, label, type, placeholder, required, options, help_text, page, show_if }) => ({
       id,
       label,
       type,
       placeholder,
       required,
       options,
+      help_text: help_text ?? "",
+      page: page ?? 0,
+      show_if: show_if ?? null,
     })),
     testimonials: form.testimonials.map(({ id, provider, url, author_name, author_handle, content }) => ({
       id,
@@ -44,7 +47,9 @@ export function newDraft(): FormDraft {
     testimonials_heading: "What clients say",
     testimonials_description: "A few words from people I've worked with.",
     theme: DEFAULT_THEME,
-    questions: starterQuestions(),
+    form_type: "single",
+    // Only name and email (always asked) to start; the user adds the rest.
+    questions: [],
     testimonials: [],
   };
 }

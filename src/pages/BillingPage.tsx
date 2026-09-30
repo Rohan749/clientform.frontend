@@ -22,7 +22,7 @@ const formatDate = (iso: string | null) =>
 const CONFIRM_TIMEOUT_MS = 45_000;
 
 export default function BillingPage() {
-  const { billing, loading, error, reload } = usePlan();
+  const { billing, loading, error, reload, testMode, testPlan } = usePlan();
   const [searchParams, setSearchParams] = useSearchParams();
   const [interval, setBillingInterval] = useState<BillingInterval>(() =>
     searchParams.get("interval") === "month" ? "month" : "year",
@@ -143,6 +143,16 @@ export default function BillingPage() {
     <PageContainer className="max-w-4xl">
       <PageHeader title="Billing" description="Your plan and payments." />
 
+      {testMode && (
+        <div className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950">
+          <p className="font-semibold">🧪 You're in Test Mode, acting as {testPlan === "pro" ? "Pro" : "Free"}.</p>
+          <p className="mt-1">
+            Below is your <strong>real</strong> plan. Upgrading, cancelling and payment changes are turned off while
+            testing. Switch to Live Mode in the sidebar to manage it.
+          </p>
+        </div>
+      )}
+
       {confirming && (
         <div className="mt-8 flex items-center gap-3 rounded-2xl border bg-neutral-50 p-5 text-sm animate-in fade-in-0">
           <Loader2 className="size-4 animate-spin" />
@@ -173,14 +183,14 @@ export default function BillingPage() {
           </div>
 
           {billing.has_billing_account && (
-            <Button variant="outline" onClick={openPortal} disabled={busy !== null} className="shrink-0">
+            <Button variant="outline" onClick={openPortal} disabled={busy !== null || testMode} className="shrink-0">
               {busy === "portal" ? <Loader2 className="animate-spin" /> : <CreditCard />}
               Manage payments <ExternalLink className="size-3 opacity-60" />
             </Button>
           )}
         </div>
 
-        {isPro && sub?.status === "active" && (
+        {isPro && sub?.status === "active" && !testMode && (
           <div className="mt-6 flex flex-wrap gap-2 border-t pt-5">
             {sub.cancel_at_period_end ? (
               <Button size="sm" onClick={() => void runAction(api.billing.resume, "Your Pro plan will keep going").catch(() => undefined)}>
@@ -229,7 +239,7 @@ export default function BillingPage() {
                 <Button
                   className="h-11 w-full"
                   onClick={startCheckout}
-                  disabled={!billing.configured || busy !== null || confirming}
+                  disabled={!billing.configured || busy !== null || confirming || testMode}
                 >
                   {busy === "checkout" && <Loader2 className="animate-spin" />}
                   Upgrade for ${PRO_PRICES[interval].amount} {PRO_PRICES[interval].per}

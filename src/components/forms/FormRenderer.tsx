@@ -1,5 +1,5 @@
-import { ArrowRight, ArrowUpRight, Check, FileText, Loader2, RotateCw, Upload, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Check, FileText, Loader2, RotateCw, Upload, X } from "lucide-react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LogoMark } from "@/components/common/Logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useGoogleFonts } from "@/hooks/useGoogleFonts";
 import { ApiError, errorMessage } from "@/lib/api";
 import { formatBytes, hostname, initials } from "@/lib/format";
-import { QUESTION_TYPE_META } from "@/lib/questions";
+import { QUESTION_TYPE_META, visibleQuestions } from "@/lib/questions";
 import { customCssProblem, fontById, googleFontsHref, scopeCss, themeStyle } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import type { Branding, FormTheme, Question, Testimonial } from "@/types";
+import type { Branding, FormTheme, FormType, Question, Testimonial } from "@/types";
 import { TestimonialWall } from "./TestimonialWall";
 
 export interface SubmissionValues {
@@ -37,21 +37,30 @@ interface FormRendererProps {
    * live    — the published public form.
    */
   mode: "preview" | "live";
+  /** "multi" splits questions into pages by `question.page` (Pro). */
+  formType?: FormType;
+  /** Shown inside another website's iframe: sized to its content, badge inline. */
+  embedded?: boolean;
   /** Load real X embeds (disable for static marketing samples). */
   embedTestimonials?: boolean;
   /** Pro design; null/undefined renders the standard ClientForm look. */
   theme?: FormTheme | null;
-  /** The floating "Powered by ClientForm" badge (hidden only by Pro white labeling). */
+  /** The "Powered by ClientForm" badge (hidden by Pro white labeling). */
   showBadge?: boolean;
   onSubmit?: (values: SubmissionValues) => Promise<void>;
   /** Uploads a file for a question and resolves to its storage path. */
   onUpload?: (questionId: string, file: File) => Promise<string>;
+  /** Called after moving to another page or after submitting (used by embeds to scroll the host page). */
+  onPageChange?: () => void;
 }
 
 type FileState = { name: string; size: number; status: "uploading" | "done" | "error"; error?: string };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function FormRenderer({
   title,
@@ -62,11 +71,14 @@ export function FormRenderer({
   testimonialsDescription = "",
   branding,
   mode,
+  formType = "single",
+  embedded = false,
   embedTestimonials = true,
   theme = null,
   showBadge = true,
   onSubmit,
   onUpload,
+  onPageChange,
 }: FormRendererProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -76,6 +88,10 @@ export function FormRenderer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const pageMoved = useRef(false);
 
   const isPreview = mode === "preview";
   const hasTestimonials = testimonials.length > 0;
@@ -88,6 +104,33 @@ export function FormRenderer({
     return { style, customColors, css };
   }, [theme]);
   useGoogleFonts(theme ? googleFontsHref([fontById(theme.font)]) : null);
+
+  // Questions currently showing (conditions depend on answers), then grouped into pages.
+  const shown = useMemo(() => visibleQuestions(questions, answers), [questions, answers]);
+  const multi = formType === "multi";
+  const pages = useMemo(
+    () => (multi ? [...new Set([0, ...shown.map((q) => q.page)])].sort((a, b) => a - b) : [0]),
+    [multi, shown],
+  );
+  const stepIndex = Math.min(step, pages.length - 1);
+  const currentPage = pages[stepIndex] ?? 0;
+  const isFirstPage = stepIndex === 0;
+  const isLastPage = stepIndex === pages.length - 1;
+  const pageQuestions = multi ? shown.filter((q) => q.page === currentPage) : shown;
+
+  // After a page change: bring the top of the form into view (only if it scrolled away) and put
+  // the cursor in the first field, without the browser jumping to it.
+  useEffect(() => {
+    if (!pageMoved.current) return;
+    pageMoved.current = false;
+    onPageChange?.();
+    const card = cardRef.current;
+    if (!card) return;
+    if (!embedded && card.getBoundingClientRect().top < 0) {
+      card.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    }
+    card.querySelector<HTMLElement>(".cf-page-body input, .cf-page-body textarea, .cf-page-body [role=radiogroup]")?.focus({ preventScroll: true });
+  }, [stepIndex, submitted, embedded, onPageChange]);
 
   const setAnswer = (id: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -123,12 +166,14 @@ export function FormRenderer({
     }
   };
 
-  const validate = () => {
+  /** Checks the contact fields (when included) and the given questions. */
+  const validate = (scope: Question[], includeContact: boolean) => {
     const next: Record<string, string> = {};
-    if (!name.trim()) next.name = "Please enter your name";
-    if (!EMAIL_PATTERN.test(email.trim())) next.email = "Please enter a valid email";
-
-    for (const question of questions) {
+    if (includeContact) {
+      if (!name.trim()) next.name = "Please enter your name";
+      if (!EMAIL_PATTERN.test(email.trim())) next.email = "Please enter a valid email";
+    }
+    for (const question of scope) {
       const value = (answers[question.id] ?? "").trim();
       if (question.type === "file" && files[question.id]?.status === "uploading") {
         next[question.id] = "Please wait for the upload to finish";
@@ -141,27 +186,65 @@ export function FormRenderer({
     return next;
   };
 
+  const showErrors = (found: Record<string, string>) => {
+    setErrors(found);
+    const firstKey = Object.keys(found)[0];
+    if (firstKey) document.getElementById(`cf-${firstKey}`)?.focus();
+  };
+
+  const goTo = (index: number) => {
+    setDirection(index > stepIndex ? 1 : -1);
+    pageMoved.current = true;
+    setStep(index);
+  };
+
+  const next = () => {
+    // Preview lets the owner click through pages without filling anything in.
+    if (!isPreview) {
+      const found = validate(pageQuestions, isFirstPage);
+      if (Object.keys(found).length > 0) {
+        showErrors(found);
+        return;
+      }
+    }
+    setErrors({});
+    goTo(stepIndex + 1);
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+
+    if (!isLastPage) {
+      next();
+      return;
+    }
 
     if (isPreview || !onSubmit) {
       toast("This is a preview", { description: "Publish your form to start receiving requests." });
       return;
     }
 
-    const found = validate();
-    setErrors(found);
+    const found = validate(shown, true);
     if (Object.keys(found).length > 0) {
+      // An error on an earlier page (e.g. after answers changed): go back to it.
       const firstKey = Object.keys(found)[0];
-      document.getElementById(`cf-${firstKey}`)?.focus();
+      const errorPage = firstKey === "name" || firstKey === "email" ? 0 : shown.find((q) => q.id === firstKey)?.page ?? currentPage;
+      const errorIndex = pages.indexOf(errorPage);
+      if (multi && errorIndex !== -1 && errorIndex !== stepIndex) goTo(errorIndex);
+      showErrors(found);
       return;
     }
 
+    // Only answers to questions the client actually saw are sent.
+    const shownIds = new Set(shown.map((q) => q.id));
+    const sentAnswers = Object.fromEntries(Object.entries(answers).filter(([id]) => shownIds.has(id)));
+
     setSubmitting(true);
     try {
-      await onSubmit({ name: name.trim(), email: email.trim(), answers, _hp: honeypot || undefined });
+      await onSubmit({ name: name.trim(), email: email.trim(), answers: sentAnswers, _hp: honeypot || undefined });
+      pageMoved.current = true;
       setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (!embedded) window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
     } catch (error) {
       if (error instanceof ApiError && error.fields) setErrors(error.fields);
       toast.error(errorMessage(error));
@@ -170,14 +253,48 @@ export function FormRenderer({
     }
   };
 
+  const contactFields = (
+    <div className="grid gap-7 @lg:grid-cols-2 @lg:gap-4">
+      <Field id="name" label="Your name" required error={errors.name}>
+        <Input
+          id="cf-name"
+          autoComplete="name"
+          placeholder="Jane Cooper"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (errors.name) setErrors(({ name: _n, ...rest }) => rest);
+          }}
+          aria-invalid={Boolean(errors.name)}
+          className="cf-input h-11"
+        />
+      </Field>
+      <Field id="email" label="Email" required error={errors.email}>
+        <Input
+          id="cf-email"
+          type="email"
+          autoComplete="email"
+          placeholder="jane@company.com"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (errors.email) setErrors(({ email: _e, ...rest }) => rest);
+          }}
+          aria-invalid={Boolean(errors.email)}
+          className="cf-input h-11"
+        />
+      </Field>
+    </div>
+  );
+
   return (
     // Full-height column: the page always fills the screen (or the preview frame), so short
-    // states like the thank-you message don't leave the page half empty.
+    // states like the thank-you message don't leave the page half empty. Embeds size to content.
     <>
     <div
       className={cn(
         "cf-root @container flex w-full flex-col bg-neutral-50 text-foreground",
-        isPreview ? "min-h-full" : "min-h-dvh",
+        embedded ? "" : isPreview ? "min-h-full" : "min-h-dvh",
       )}
       style={themed?.style}
       data-cf-colors={themed?.customColors ? "" : undefined}
@@ -186,9 +303,10 @@ export function FormRenderer({
       {themed?.css ? <style>{themed.css}</style> : null}
       <div
         className={cn(
-          "cf-page mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 py-4 @md:px-6 @md:py-8 @5xl:py-14",
+          "cf-page mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 py-4 @md:px-6 @md:py-8",
+          !embedded && "@5xl:py-14",
           // Room for the floating badge so it never covers the send button at the very end.
-          showBadge && "pb-20 @md:pb-20 @5xl:pb-20",
+          showBadge && !embedded && "pb-20 @md:pb-20 @5xl:pb-20",
         )}
       >
         <div
@@ -198,7 +316,7 @@ export function FormRenderer({
           )}
         >
           {/* Left: the form */}
-          <div className="cf-card flex min-w-0 flex-col rounded-2xl   p-6 shadow-xs @2xl:p-10">
+          <div ref={cardRef} className="cf-card flex min-w-0 scroll-mt-4 flex-col rounded-2xl   p-6 shadow-xs @2xl:p-10">
             <BrandHeader branding={branding} />
             <div className="mt-8 flex flex-1 flex-col">
             {submitted ? (
@@ -218,7 +336,11 @@ export function FormRenderer({
                   )}
                 </header>
 
-                <form className="cf-form mt-10 space-y-7" onSubmit={handleSubmit} noValidate>
+                {multi && pages.length > 1 && (
+                  <PageProgress current={stepIndex} total={pages.length} />
+                )}
+
+                <form className={cn("cf-form space-y-7", multi && pages.length > 1 ? "mt-8" : "mt-10")} onSubmit={handleSubmit} noValidate>
                   {/* Honeypot: hidden from people, tempting for bots */}
                   <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
                     <label>
@@ -227,66 +349,74 @@ export function FormRenderer({
                     </label>
                   </div>
 
-                  <div className="grid gap-7 @lg:grid-cols-2 @lg:gap-4">
-                    <Field id="name" label="Your name" required error={errors.name}>
-                      <Input
-                        id="cf-name"
-                        autoComplete="name"
-                        placeholder="Jane Cooper"
-                        value={name}
-                        onChange={(e) => {
-                          setName(e.target.value);
-                          if (errors.name) setErrors(({ name: _n, ...rest }) => rest);
-                        }}
-                        aria-invalid={Boolean(errors.name)}
-                        className="cf-input h-11"
-                      />
-                    </Field>
-                    <Field id="email" label="Email" required error={errors.email}>
-                      <Input
-                        id="cf-email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="jane@company.com"
-                        value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          if (errors.email) setErrors(({ email: _e, ...rest }) => rest);
-                        }}
-                        aria-invalid={Boolean(errors.email)}
-                        className="cf-input h-11"
-                      />
-                    </Field>
+                  {/* Each page slides in from the side it's coming from. */}
+                  <div
+                    key={multi ? currentPage : "single"}
+                    className={cn(
+                      "cf-page-body space-y-7",
+                      multi &&
+                        pages.length > 1 &&
+                        "animate-in fade-in-0 duration-300 ease-out motion-reduce:animate-none",
+                      multi && pages.length > 1 && (direction > 0 ? "slide-in-from-right-4" : "slide-in-from-left-4"),
+                    )}
+                  >
+                    {isFirstPage && contactFields}
+
+                    {pageQuestions.map((question) => (
+                      <Field
+                        key={question.id}
+                        id={question.id}
+                        label={question.label.trim() || QUESTION_TYPE_META[question.type].label}
+                        hint={question.help_text}
+                        required={question.required}
+                        error={errors[question.id]}
+                        // Questions revealed by an answer ease in instead of popping.
+                        className={question.show_if ? "animate-in fade-in-0 slide-in-from-top-1 duration-300 motion-reduce:animate-none" : undefined}
+                      >
+                        <QuestionInput
+                          question={question}
+                          value={answers[question.id] ?? ""}
+                          file={files[question.id]}
+                          invalid={Boolean(errors[question.id])}
+                          onChange={(value) => setAnswer(question.id, value)}
+                          onFile={(file) => handleFile(question, file)}
+                        />
+                      </Field>
+                    ))}
                   </div>
 
-                  {questions.map((question) => (
-                    <Field
-                      key={question.id}
-                      id={question.id}
-                      label={question.label.trim() || QUESTION_TYPE_META[question.type].label}
-                      required={question.required}
-                      error={errors[question.id]}
-                    >
-                      <QuestionInput
-                        question={question}
-                        value={answers[question.id] ?? ""}
-                        file={files[question.id]}
-                        invalid={Boolean(errors[question.id])}
-                        onChange={(value) => setAnswer(question.id, value)}
-                        onFile={(file) => handleFile(question, file)}
-                      />
-                    </Field>
-                  ))}
-
                   <div className="pt-2">
-                    <Button type="submit" size="lg" className="cf-submit h-12 w-full text-[15px] @lg:w-auto" disabled={submitting}>
-                      {submitting ? <Loader2 className="animate-spin" /> : null}
-                      Send project request
-                      {!submitting && <ArrowRight />}
-                    </Button>
-                    <p className="cf-note mt-3 text-xs text-muted-foreground">
-                      Your answers are only shared with {brandName ?? "the form owner"}.
-                    </p>
+                    <div className="flex flex-col-reverse gap-3 @lg:flex-row @lg:items-center">
+                      {!isFirstPage && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="lg"
+                          className="cf-back h-12 text-[15px] text-muted-foreground"
+                          onClick={() => {
+                            setErrors({});
+                            goTo(stepIndex - 1);
+                          }}
+                        >
+                          <ArrowLeft /> Back
+                        </Button>
+                      )}
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className={cn("h-12 w-full text-[15px] @lg:w-auto", isLastPage ? "cf-submit" : "cf-next")}
+                        disabled={submitting}
+                      >
+                        {submitting ? <Loader2 className="animate-spin" /> : null}
+                        {isLastPage ? "Send project request" : "Continue"}
+                        {!submitting && <ArrowRight />}
+                      </Button>
+                    </div>
+                    {isLastPage && (
+                      <p className="cf-note mt-3 text-xs text-muted-foreground">
+                        Your answers are only shared with {brandName ?? "the form owner"}.
+                      </p>
+                    )}
                   </div>
                 </form>
               </>
@@ -297,7 +427,6 @@ export function FormRenderer({
           {/* Right: testimonials — as tall as the form, overflow scrolls in a loop */}
           {hasTestimonials && (
             <aside aria-label={testimonialsHeading.trim() || "Testimonials"} className="relative min-w-0 @4xl:min-h-[480px]">
-              
               <TestimonialWall
                 testimonials={testimonials}
                 heading={testimonialsHeading}
@@ -309,10 +438,35 @@ export function FormRenderer({
           )}
         </div>
 
+        {showBadge && embedded && (
+          <div className="mt-4 flex justify-end">
+            <FormBadge floating="inline" />
+          </div>
+        )}
       </div>
     </div>
-    {showBadge && <FormBadge floating={isPreview ? "sticky" : "fixed"} />}
+    {showBadge && !embedded && <FormBadge floating={isPreview ? "sticky" : "fixed"} />}
     </>
+  );
+}
+
+/** "Step 2 of 3" with a bar that grows smoothly. */
+function PageProgress({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="cf-progress mt-8" aria-label={`Step ${current + 1} of ${total}`}>
+      <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+        <span>
+          Step {current + 1} of {total}
+        </span>
+        <span>{Math.round(((current + 1) / total) * 100)}%</span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className="cf-progress-bar h-full rounded-full bg-primary transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          style={{ width: `${((current + 1) / total) * 100}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -321,7 +475,7 @@ export function FormRenderer({
  * It sits outside the themed root, so a form's colors and fonts never restyle it.
  * In the builder preview it sticks to the preview frame instead of the browser window.
  */
-function FormBadge({ floating }: { floating: "fixed" | "sticky" }) {
+function FormBadge({ floating }: { floating: "fixed" | "sticky" | "inline" }) {
   const badge = (
     <a
       href="/"
@@ -336,6 +490,8 @@ function FormBadge({ floating }: { floating: "fixed" | "sticky" }) {
       </span>
     </a>
   );
+
+  if (floating === "inline") return badge;
 
   if (floating === "fixed") {
     return (
@@ -386,18 +542,23 @@ function BrandHeader({ branding }: { branding: Branding }) {
 function Field({
   id,
   label,
+  hint,
   required,
   error,
+  className,
   children,
 }: {
   id: string;
   label: string;
+  /** Optional sub-label explaining the question. */
+  hint?: string;
   required?: boolean;
   error?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="cf-field space-y-2.5">
+    <div className={cn("cf-field space-y-2.5", className)}>
       <label htmlFor={`cf-${id}`} className="cf-label block text-sm font-medium">
         {label}
         {required ? (
@@ -408,6 +569,9 @@ function Field({
           <span className="ml-1.5 text-xs font-normal text-muted-foreground">Optional</span>
         )}
       </label>
+      {hint?.trim() && (
+        <p className="cf-help -mt-1 text-[13px] leading-relaxed wrap-anywhere text-muted-foreground">{hint.trim()}</p>
+      )}
       {children}
       {error && (
         <p className="cf-error text-xs font-medium text-destructive animate-in fade-in-0 slide-in-from-top-0.5">{error}</p>

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Copy, GripVertical, MoreHorizontal, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Crown, FileStack, GitBranch, GripVertical, MoreHorizontal, Trash2, Upload, X } from "lucide-react";
 import type { ComponentProps } from "react";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -27,6 +28,14 @@ interface QuestionEditorProps {
   onRemove: () => void;
   itemProps: ComponentProps<"div">;
   handleProps: ComponentProps<"button">;
+  /** Earlier choice questions this one can depend on (conditional logic). */
+  conditionSources: Question[];
+  /** Conditions are a Pro feature. */
+  pro: boolean;
+  /** Called when a non-Pro user reaches for a Pro feature. */
+  onRequirePro: () => void;
+  /** Multi-page forms: how many pages exist, to offer "Move to page". */
+  pageCount?: number;
 }
 
 /**
@@ -44,8 +53,21 @@ export function QuestionEditor({
   onRemove,
   itemProps,
   handleProps,
+  conditionSources,
+  pro,
+  onRequirePro,
+  pageCount,
 }: QuestionEditorProps) {
   const meta = QUESTION_TYPE_META[question.type];
+
+  const addCondition = () => {
+    if (!pro) {
+      onRequirePro();
+      return;
+    }
+    const source = conditionSources[conditionSources.length - 1];
+    if (source) onChange({ show_if: { question_id: source.id, value: source.options[0] ?? "" } });
+  };
 
   const changeType = (type: QuestionType) => {
     const nextMeta = QUESTION_TYPE_META[type];
@@ -131,10 +153,32 @@ export function QuestionEditor({
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-60">
               <DropdownMenuItem onSelect={onDuplicate}>
                 <Copy /> Duplicate
               </DropdownMenuItem>
+              {!question.show_if && (
+                <DropdownMenuItem onSelect={addCondition} disabled={pro && conditionSources.length === 0}>
+                  <GitBranch /> Show only if…
+                  {!pro && <Crown className="ml-auto size-3.5 text-violet-600" />}
+                </DropdownMenuItem>
+              )}
+              {pro && !question.show_if && conditionSources.length === 0 && (
+                <p className="px-2 pb-1.5 text-[11px] leading-snug text-muted-foreground">
+                  Add a multiple choice or budget question above this one first.
+                </p>
+              )}
+              {pageCount !== undefined && pageCount > 1 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Move to page</DropdownMenuLabel>
+                  {Array.from({ length: pageCount }, (_, page) => (
+                    <DropdownMenuItem key={page} disabled={page === question.page} onSelect={() => onChange({ page })}>
+                      <FileStack /> Page {page + 1}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={onRemove}>
                 <Trash2 /> Delete question
@@ -143,6 +187,10 @@ export function QuestionEditor({
           </DropdownMenu>
         </div>
       </div>
+
+      {question.show_if && (
+        <ConditionRow question={question} sources={conditionSources} onChange={onChange} />
+      )}
 
       {/* Label */}
       <div className="flex items-start gap-3">
@@ -161,6 +209,16 @@ export function QuestionEditor({
           </span>
         )}
       </div>
+
+      {/* Optional sub-label: a short "why we ask" under the question */}
+      <AutoTextarea
+        value={question.help_text}
+        maxLength={300}
+        placeholder="Add a note under the question (optional)"
+        aria-label={`Sub-label for question ${index + 1}`}
+        onChange={(e) => onChange({ help_text: e.target.value.replace(/\n/g, " ") })}
+        className="mt-1 text-[13px] leading-relaxed text-muted-foreground placeholder:text-muted-foreground/45"
+      />
 
       {/* Answer area, as the client will see it */}
       <div className="mt-3">
@@ -198,6 +256,79 @@ export function QuestionEditor({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+/** "Show this question only if [question] is [answer]", in plain words. */
+function ConditionRow({
+  question,
+  sources,
+  onChange,
+}: {
+  question: Question;
+  sources: Question[];
+  onChange: (patch: Partial<Question>) => void;
+}) {
+  const rule = question.show_if;
+  if (!rule) return null;
+  const source = sources.find((q) => q.id === rule.question_id);
+  const answerMissing = source !== undefined && !source.options.includes(rule.value);
+
+  return (
+    <div className="mb-2 rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2.5 animate-in fade-in-0 duration-200">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[13px]">
+        <GitBranch className="size-3.5 shrink-0 text-violet-600" />
+        <span className="text-muted-foreground">Show this question only if</span>
+        <Select
+          value={source ? rule.question_id : undefined}
+          onValueChange={(question_id) => {
+            const next = sources.find((q) => q.id === question_id);
+            onChange({ show_if: { question_id, value: next?.options[0] ?? "" } });
+          }}
+        >
+          <SelectTrigger size="sm" className="h-7 max-w-56 bg-background text-xs">
+            <SelectValue placeholder="Pick a question" />
+          </SelectTrigger>
+          <SelectContent>
+            {sources.map((q, i) => (
+              <SelectItem key={q.id} value={q.id}>
+                <span className="truncate">{q.label.trim() || `Question ${i + 1}`}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground">is</span>
+        <Select
+          value={source && !answerMissing ? rule.value : undefined}
+          onValueChange={(value) => onChange({ show_if: { question_id: rule.question_id, value } })}
+          disabled={!source}
+        >
+          <SelectTrigger size="sm" className="h-7 max-w-48 bg-background text-xs">
+            <SelectValue placeholder="Pick an answer" />
+          </SelectTrigger>
+          <SelectContent>
+            {(source?.options ?? []).filter(Boolean).map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button
+          type="button"
+          onClick={() => onChange({ show_if: null })}
+          className="ml-auto rounded-md p-1 text-muted-foreground hover:bg-background hover:text-foreground"
+          aria-label="Remove condition"
+        >
+          <X className="size-3.5" />
+        </button>
+      </div>
+      {(!source || answerMissing) && (
+        <p className="mt-1.5 text-xs text-amber-700">
+          {source ? "That answer was changed or removed. Pick another one." : "The question this depends on was moved or removed. Pick another one."}
+        </p>
+      )}
     </div>
   );
 }
